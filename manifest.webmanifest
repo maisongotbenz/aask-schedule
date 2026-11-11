@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "AASK SCHEDULE — Расписание ААСК",
+  "short_name": "AASK SCHEDULE",
+  "description": "Расписание занятий Алтайского архитектурно-строительного колледжа",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8e6e1",
+  "theme_color": "#1d2330",
+  "icons": [
+    {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
