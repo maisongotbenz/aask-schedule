@@ -4,7 +4,7 @@ import re
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
-from io import StringIO
+from io import BytesIO
 
 def download_and_parse(date_str):
     url = f"https://www.altask.ru/images/raspisanie/DO/{date_str}.xls"
@@ -19,28 +19,27 @@ def download_and_parse(date_str):
         
         print(f"Файл скачан, размер: {len(r.content)} байт")
         
-        # 1. Пытаемся прочитать как Excel
+        # 1. Пытаемся прочитать как Excel (бинарный формат)
         try:
-            df = pd.read_excel(StringIO(r.content.decode('cp1251')), header=None)
+            # Передаем BytesIO, чтобы pandas сам разобрался с кодировкой
+            df = pd.read_excel(BytesIO(r.content), header=None)
             print("Excel успешно прочитан.")
             return df
         except Exception as e:
             print(f"Не удалось прочитать как Excel: {e}")
         
-        # 2. Если не вышло - пробуем как HTML
-        try:
-            for enc in ['cp1251', 'utf-8', 'latin1']:
-                try:
-                    html_content = r.content.decode(enc, errors='ignore')
-                    dfs = pd.read_html(StringIO(html_content), header=None)
-                    if dfs:
-                        print(f"HTML успешно прочитан (кодировка {enc}).")
-                        return dfs[0]
-                except Exception:
-                    continue
-        except Exception as e:
-            print(f"Не удалось прочитать как HTML: {e}")
-            
+        # 2. Если не вышло - пробуем как HTML (перебираем кодировки)
+        for enc in ['utf-8', 'cp1251', 'latin1', 'windows-1251']:
+            try:
+                html_content = r.content.decode(enc, errors='ignore')
+                dfs = pd.read_html(html_content, header=None)
+                if dfs:
+                    print(f"HTML успешно прочитан (кодировка {enc}).")
+                    return dfs[0]
+            except Exception:
+                continue
+                
+        print("Не удалось прочитать файл ни как Excel, ни как HTML.")
         return None
     except Exception as e:
         print(f"Ошибка при скачивании: {e}")
@@ -48,7 +47,6 @@ def download_and_parse(date_str):
 
 def parse_dataframe(df, date_key):
     try:
-        # Ищем заголовок
         title = ""
         for i in range(min(10, len(df))):
             row_str = " ".join([str(x) for x in df.iloc[i].values if not pd.isna(x)])
@@ -115,7 +113,6 @@ def main():
     all_groups = set()
     
     now = datetime.now()
-    # Пробуем скачать на 5 дней вперед (пропуская выходные, если файлов нет)
     for i in range(5):
         target = now + timedelta(days=i)
         date_str = target.strftime("%d%m")
