@@ -1,44 +1,141 @@
-{
-  "updated": "2026-11-12T23:30+07:00",
-  "groups": [
-    "А-31", "А-41", "А-51", "А-61", "ГД-51", "ГД-52", "ГД-61", "ГД-62", "Д-31", "Д-32", "Д-41", "Д-42", "Д-51", "Д-52", "Д-61", "Д-62", "ЗУ-31", "ЗУ-32", "ЗУ-41", "ЗУ-42", "ЗУ-51", "ЗУ-52", "ЗУ-61", "ЗУ-62", "ИМС-51", "ИМС-61", "ИСИП-31", "ИСИП-41", "ИСИП-42", "ИСиСС-61", "ИСиСС51", "МСГ-31", "МСГ-32", "МСГ-41", "МСГ-42", "МСГ-51", "МСГ-52", "МСГ-61", "МСГ-62", "МСТУ-41", "МСТУ-51", "МСТУ-61", "ПНСК-31", "ПНСК-32", "ПНСК-41", "ПНСК-42", "ПНСК-51", "ПНСК-52", "ПНСК-61", "ПНСК-62", "СЭАДА-51", "СЭАДА-61", "СЭГПС-31", "СЭГПС-41", "СЭЗС-31", "СЭЗС-32", "СЭЗС-41", "СЭЗС-42", "СЭЗС-43", "СЭЗС-44", "СЭЗС-51", "СЭЗС-52", "СЭЗС-53", "СЭЗС-54", "СЭЗС-61", "СЭЗС-62", "СЭЗС-63", "СЭЗС-64", "СЭЗС-65", "ЭОМД-61"
-  ],
-  "days": {
-    "2026-11-12": {
-      "weekday": "четверг",
-      "week": 1,
-      "groups": {
-        "А-31": [
-          {"n": 1, "s": "нач. архит. Проект.", "t": "Дьячкова Е.Г.", "r": "221", "p": 1},
-          {"n": 2, "s": "КЗИС", "t": "Дьячкова Е.Г. 221 Куркин А.А.", "r": ""},
-          {"n": 3, "s": "КЗИС", "t": "Дьячкова Е.Г. 221 Куркин А.А.", "r": ""},
-          {"n": 4, "s": "психология", "t": "Потапова Е.А.", "r": "20"}
-        ],
-        "ЗУ-31": [
-          {"n": 3, "s": "иностранный язык", "t": "Кайль Ю.А.", "r": "31а", "p": 1},
-          {"n": 4, "s": "осв. Работ \"Замерщик на маркшейд. Работах\"", "t": "Фидоринова К.Ю.", "r": "36"},
-          {"n": 5, "s": "физкультура", "t": "Матвиенко А.А.", "r": ""},
-          {"n": 6, "s": "иностранный язык", "t": "Снитко М.С.", "r": "21", "p": 1}
-        ]
-      }
-    },
-    "2026-11-13": {
-      "weekday": "пятница",
-      "week": 1,
-      "groups": {
-        "А-31": [
-          {"n": 1, "s": "нач. архит. Проект.", "t": "Дьячкова Е.Г.", "r": "221", "p": 1},
-          {"n": 2, "s": "КЗИС", "t": "Дьячкова Е.Г. 221 Куркин А.А.", "r": ""},
-          {"n": 3, "s": "КЗИС", "t": "Дьячкова Е.Г. 221 Куркин А.А.", "r": ""},
-          {"n": 4, "s": "психология", "t": "Потапова Е.А.", "r": "20"}
-        ],
-        "ЗУ-31": [
-          {"n": 3, "s": "иностранный язык", "t": "Кайль Ю.А.", "r": "31а", "p": 1},
-          {"n": 4, "s": "осв. Работ \"Замерщик на маркшейд. Работах\"", "t": "Фидоринова К.Ю.", "r": "36"},
-          {"n": 5, "s": "физкультура", "t": "Матвиенко А.А.", "r": ""},
-          {"n": 6, "s": "иностранный язык", "t": "Снитко М.С.", "r": "21", "p": 1}
-        ]
-      }
+import os
+import json
+import re
+import requests
+import pandas as pd
+from datetime import datetime
+from io import StringIO
+
+BASE_URL = "https://altask.ru/DO/"
+
+def download_and_parse(date_str):
+    url = f"{BASE_URL}{date_str}.xls"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    try:
+        r = requests.get(url, headers=headers, timeout=15)
+        if r.status_code != 200:
+            print(f"Файл {date_str}.xls не найден (Статус: {r.status_code})")
+            return None
+        
+        # Пытаемся прочитать как Excel или HTML
+        try:
+            df = pd.read_excel(StringIO(r.content.decode('cp1251')), header=None)
+        except Exception:
+            try:
+                dfs = pd.read_html(StringIO(r.content.decode('cp1251', errors='ignore')), header=None)
+                df = dfs[0]
+            except Exception as e:
+                print(f"Не удалось прочитать файл {date_str}.xls: {e}")
+                return None
+        return df
+    except Exception as e:
+        print(f"Ошибка при скачивании {date_str}.xls: {e}")
+        return None
+
+def parse_dataframe(df, date_key):
+    try:
+        # Ищем заголовок
+        title = ""
+        for i in range(min(10, len(df))):
+            row_str = " ".join([str(x) for x in df.iloc[i].values if not pd.isna(x)])
+            if "неделя" in row_str.lower():
+                title = row_str
+                break
+        
+        week = int(re.search(r'(\d+)\s*неделя', title).group(1)) if re.search(r'(\d+)\s*неделя', title) else 1
+        weekday = "четверг"
+        for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
+            if d in title.lower(): weekday = d; break
+        
+        groups = {}
+        
+        # Ищем ВСЕ строки, где начинается блок с группами (там, где "№ пары")
+        block_starts = []
+        for r in range(len(df)):
+            if str(df.iloc[r, 0]).strip() == "№ пары":
+                block_starts.append(r)
+        
+        for i, start in enumerate(block_starts):
+            end = block_starts[i+1] if i+1 < len(block_starts) else len(df)
+            
+            # Собираем названия групп из этой строки (начиная со 2-го столбца)
+            cols = []
+            for c in range(1, len(df.columns)):
+                val = df.iloc[start, c]
+                if not pd.isna(val):
+                    gname = str(val).strip()
+                    if gname and gname != "nan":
+                        cols.append((c, gname))
+            
+            # Проходим по парам в этом блоке
+            r = start + 1
+            while r < end - 1:
+                num_str = str(df.iloc[r, 0]).strip()
+                if num_str.isdigit() and 1 <= int(num_str) <= 7:
+                    num = int(num_str)
+                    for c, gname in cols:
+                        subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
+                        t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
+                        
+                        if subj or t_info:
+                            t = t_info
+                            rm = ""
+                            p = None
+                            if "(п/п)" in t or "подгруппа" in t.lower(): p = 1
+                            room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
+                            if room_match:
+                                rm = room_match.group(1)
+                                t = t.replace(room_match.group(0), '').strip()
+                            t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
+                            
+                            item = {"n": num, "s": subj, "t": t, "r": rm}
+                            if p: item["p"] = p
+                            
+                            if gname not in groups: groups[gname] = []
+                            if not any(x["n"] == num and x["s"] == subj for x in groups[gname]):
+                                groups[gname].append(item)
+                    r += 2
+                else: 
+                    r += 1
+                    
+        return {"weekday": weekday, "week": week, "groups": groups}
+    except Exception as e:
+        print(f"Ошибка парсинга: {e}")
+        return None
+
+def main():
+    all_days = {}
+    all_groups = set()
+    
+    now = datetime.now()
+    for i in range(3): # Берем 3 дня (сегодня, завтра, послезавтра)
+        target = now + pd.Timedelta(days=i)
+        date_str = target.strftime("%d%m")
+        date_key = target.strftime("%Y-%m-%d")
+        
+        print(f"--- Пробуем {date_str} ({date_key}) ---")
+        df = download_and_parse(date_str)
+        
+        if df is not None:
+            day_data = parse_dataframe(df, date_key)
+            if day_data and day_data['groups']:
+                all_days[date_key] = day_data
+                all_groups.update(day_data['groups'].keys())
+                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
+
+    if not all_days:
+        print("!!! Нет данных.")
+        return
+
+    res = {
+        "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
+        "groups": sorted(list(all_groups)),
+        "days": all_days
     }
-  }
-}
+    
+    with open('schedule.json', 'w', encoding='utf-8') as f:
+        json.dump(res, f, ensure_ascii=False, indent=2)
+    print(f"Готово! Сохранено дней: {len(all_days)}")
+
+if __name__ == "__main__":
+    main()
