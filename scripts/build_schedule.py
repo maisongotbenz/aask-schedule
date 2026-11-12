@@ -6,55 +6,44 @@ import pandas as pd
 from datetime import datetime
 from io import StringIO
 
-FILES = [
-    {"file": "1211.xls", "date": "2026-11-12"},
-    {"file": "1311.xls", "date": "2026-11-13"},
-]
+# Базовый URL, откуда сайт колледжа отдает файлы
+BASE_URL = "https://altask.ru/DO/"
 
-def download_file(filename):
-    url = f"https://raw.githubusercontent.com/maisongotbenz/aask-schedule/main/{filename}"
-    print(f"Пытаемся скачать: {url}")
+def download_and_parse(date_str):
+    """Скачивает файл и пытается его распарсить"""
+    url = f"{BASE_URL}{date_str}.xls"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    
     try:
-        r = requests.get(url, timeout=15)
-        print(f"Статус ответа: {r.status_code}")
-        if r.status_code == 200:
-            path = f"/tmp/{filename}"
-            with open(path, 'wb') as f: 
-                f.write(r.content)
-            print(f"Файл сохранен: {path} (размер: {len(r.content)} байт)")
-            return path
-        else:
-            print(f"Ошибка! Сервер вернул статус {r.status_code}")
-    except Exception as e:
-        print(f"Исключение при скачивании {filename}: {e}")
-    return None
-
-def parse_teacher(cell):
-    if not cell or pd.isna(cell): return "", "", None
-    cell = str(cell).strip()
-    room = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', cell)
-    room = room.group(1) if room else ""
-    p = 1 if "(п/п)" in cell or "подгруппа" in cell.lower() else None
-    teacher = re.sub(r'\s*\d+[а-яА-Я]?\s*(?:\(п/п\)|\(подгруппа\))?\s*$', '', cell).strip()
-    return teacher, room, p
-
-def parse_file(path, date_key):
-    if not path or not os.path.exists(path): return None
-    try:
+        r = requests.get(url, headers=headers, timeout=15)
+        if r.status_code != 200:
+            print(f"Файл {date_str}.xls не найден (Статус: {r.status_code})")
+            return None
+            
+        print(f"Файл {date_str}.xls скачан, размер: {len(r.content)} байт")
+        
         # Пытаемся прочитать как Excel
         try:
-            df = pd.read_excel(path, header=None)
+            df = pd.read_excel(StringIO(r.content.decode('cp1251')), header=None)
         except Exception:
-            # Если не получилось, пробуем как HTML (частая проблема .xls с сайтов)
-            print("Не удалось прочитать как Excel, пробуем как HTML...")
-            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
-                html_content = f.read()
-            dfs = pd.read_html(StringIO(html_content), header=None)
-            if not dfs:
-                raise ValueError("Не найдено таблиц в HTML")
-            df = dfs[0] # Берем первую таблицу
-        
-        # Ищем заголовок
+            # Если не получилось, пробуем как HTML (сайт часто отдает HTML под видом .xls)
+            try:
+                dfs = pd.read_html(StringIO(r.content.decode('cp1251', errors='ignore')), header=None)
+                df = dfs[0]
+            except Exception as e:
+                print(f"Не удалось прочитать файл {date_str}.xls: {e}")
+                return None
+                
+        return df
+    except Exception as e:
+        print(f"Ошибка при скачивании {date_str}.xls: {e}")
+        return None
+
+def parse_dataframe(df, date_key):
+    try:
+        # Ищем заголовок (дата, день недели)
         title = ""
         for i in range(min(10, len(df))):
             row_str = " ".join([str(x) for x in df.iloc[i].values if not pd.isna(x)])
@@ -71,7 +60,6 @@ def parse_file(path, date_key):
             if d in title.lower(): weekday = d; break
         
         groups = {}
-        # Ищем строки, где первый столбец содержит "№ пары"
         starts = []
         for r in range(len(df)):
             if str(df.iloc[r, 0]).strip() == "№ пары":
@@ -79,16 +67,10 @@ def parse_file(path, date_key):
         
         for i, start in enumerate(starts):
             end = starts[i+1] if i+1 < len(starts) else len(df)
-            
-            # Получаем названия групп из строки start
-            cols = []
-            for c in range(1, len(df.columns)):
-                gname = str(df.iloc[start, c]).strip()
-                if gname and gname != "nan": 
-                    cols.append((c, gname))
+            cols = [(c, str(df.iloc[start, c]).strip()) for c in range(1, len(df.columns)) if not pd.isna(df.iloc[start, c]) and str(df.iloc[start, c]).strip()]
             
             r = start + 1
-            while r < end - 1: # -1, так как смотрим r+1
+            while r < end - 1:
                 num_str = str(df.iloc[r, 0]).strip()
                 if num_str.isdigit() and 1 <= int(num_str) <= 7:
                     num = int(num_str)
@@ -97,9 +79,27 @@ def parse_file(path, date_key):
                         t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
                         
                         if subj or t_info:
-                            t, rm, p = parse_teacher(t_info)
+                            # Простейшая очистка от аудитории и подгруппы
+                            t = t_info
+                            rm = ""
+                            p = None
+                            
+                            # Ищем подгруппу
+                            if "(п/п)" in t or "подгруппа" in t.lower():
+                                p = 1
+                            
+                            # Ищем аудиторию (число в конце)
+                            room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
+                            if room_match:
+                                rm = room_match.group(1)
+                                t = t.replace(room_match.group(0), '').strip()
+                            
+                            # Убираем лишнее из имени преподавателя
+                            t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
+                            
                             item = {"n": num, "s": subj, "t": t, "r": rm}
                             if p: item["p"] = p
+                            
                             if gname not in groups: groups[gname] = []
                             if not any(x["n"] == num and x["s"] == subj for x in groups[gname]):
                                 groups[gname].append(item)
@@ -108,27 +108,34 @@ def parse_file(path, date_key):
                     r += 1
         return {"weekday": weekday, "week": week, "groups": groups}
     except Exception as e:
-        print(f"Критическая ошибка парсинга {path}: {e}")
+        print(f"Ошибка парсинга: {e}")
         return None
 
 def main():
     all_days = {}
     all_groups = set()
     
-    for item in FILES:
-        print(f"--- Обработка {item['file']} ---")
-        path = download_file(item['file'])
-        if path:
-            day_data = parse_file(path, item['date'])
+    now = datetime.now()
+    # Пробуем скачать расписание на сегодня, завтра и послезавтра
+    for i in range(3):
+        target = now + pd.Timedelta(days=i)
+        date_str = target.strftime("%d%m")
+        date_key = target.strftime("%Y-%m-%d")
+        
+        print(f"--- Пробуем {date_str} ({date_key}) ---")
+        df = download_and_parse(date_str)
+        
+        if df is not None:
+            day_data = parse_dataframe(df, date_key)
             if day_data and day_data['groups']:
-                all_days[item['date']] = day_data
+                all_days[date_key] = day_data
                 all_groups.update(day_data['groups'].keys())
-                print(f"  -> Успешно добавлен день {item['date']} (групп: {len(day_data['groups'])})")
+                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
             else:
-                print(f"  -> Не удалось распарсить данные из {item['file']}")
+                print(f"  -> Не удалось извлечь данные из файла {date_str}.xls")
 
     if not all_days:
-        print("!!! Нет данных для сохранения.")
+        print("!!! Нет данных. Возможно, сайт колледжа недоступен или файлы не выложены.")
         return
 
     res = {
