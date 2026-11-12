@@ -4,7 +4,7 @@ import requests
 import xlrd
 from datetime import datetime
 
-BASE_URL = "https://altask.ru/DO/" 
+BASE_URL = "https://altask.ru/DO/"
 
 def download_file(date_str):
     filename = f"{date_str}.xls"
@@ -46,26 +46,25 @@ def parse_excel(file_path):
 
 def main():
     today = datetime.now()
-    date_str = today.strftime("%d%m") 
+    date_str = today.strftime("%d%m")
     print(f"Ищем расписание на дату: {date_str}")
-    
+
     file_path = download_file(date_str)
-    
+
     if file_path:
         print("Файл скачан, начинаем парсинг...")
         parsed_data = parse_excel(file_path)
-        
+
         if parsed_data:
-            # Сохраняем в корень проекта, где лежит index.html
-            output_path = 'schedule.json' 
-            
+            output_path = 'schedule.json'
+
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(parsed_data, f, ensure_ascii=False, indent=2)
             print(f"Успешно сохранено в {output_path}")
         else:
             print("Не удалось распарсить данные из файла.")
     else:
-        print("Не удалось скачать файл расписания. Возможно, на сайте его еще нет или изменился URL.")
+        print("Не удалось скачать файл расписания. Возможно, на сайте его еще нет.")
 
 if __name__ == "__main__":
     main()
