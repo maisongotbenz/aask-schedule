@@ -5,4 +5,4 @@
 - `.github/workflows/update.yml` — запускает скрипт каждые 2 часа и сохраняет изменения.
 - `wrangler.jsonc` — настройка Cloudflare (имя воркера и папка с сайтом).
 
-Ручной запуск на своём компьютере: `pip install xlrd openpyxl`, затем `python scripts/build_schedule.py`.
+Ручной запуск на своём компьютере: `pip install xlrd openpyxl tzdata`, затем `python scripts/build_schedule.py`.
