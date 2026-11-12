@@ -1,6 +1,7 @@
 {
   "name": "aask-schedule-api",
-  "compatibility_date": "2026-11-01",
+  "compatibility_date": "2026-11-12",
   "assets": {
-  "directory": "."
+    "directory": "."
+  }
 }
