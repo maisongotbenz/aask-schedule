@@ -3,25 +3,32 @@ import json
 import re
 import requests
 import xlrd
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# ВАЖНО: Если файл лежит в корне и называется 1311.xls
-# Если вы закинули его в другую папку, измените ссылку (добавьте /имя_папки/)
-LOCAL_EXCEL_URL = "https://raw.githubusercontent.com/maisongotbenz/aask-schedule/main/1311.xls"
+# ВАЖНО: Здесь перечислены файлы, которые вы загрузили в репозиторий.
+# Если вы загрузили только 1211 и 1311, уберите строчку с 1411.
+FILES_TO_PARSE = [
+    ("1211.xls", "2026-11-12"),
+    ("1311.xls", "2026-11-13"),
+    # ("1411.xls", "2026-11-14"),  <-- Раскомментируйте, если загрузили этот файл
+]
 
-def download_file(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
+BASE_RAW_URL = "https://raw.githubusercontent.com/maisongotbenz/aask-schedule/main/"
+
+def download_file(filename):
+    url = f"{BASE_RAW_URL}{filename}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
-            file_path = "/tmp/schedule.xls"
+            file_path = f"/tmp/{filename}"
             with open(file_path, 'wb') as f:
                 f.write(response.content)
             return file_path
+        else:
+            print(f"Файл {filename} не найден на GitHub (Статус: {response.status_code})")
     except Exception as e:
-        print(f"Ошибка скачивания: {e}")
+        print(f"Ошибка скачивания {filename}: {e}")
     return None
 
 def parse_teacher_info(cell_text):
@@ -33,13 +40,13 @@ def parse_teacher_info(cell_text):
     teacher = re.sub(r'\s*\d+[а-яА-Я]?\s*(?:\(п/п\)|\(подгруппа\))?\s*$', '', cell_text).strip()
     return teacher, room, subgroup
 
-def parse_excel_for_day(file_path, target_date_key):
+def parse_excel(file_path, date_key):
     if not file_path or not os.path.exists(file_path): return None
     try:
         workbook = xlrd.open_workbook(file_path)
         sheet = workbook.sheet_by_index(0)
         
-        # Вытаскиваем день и неделю из заголовка
+        # Извлекаем день и неделю
         title = str(sheet.cell_value(0, 8))
         week_match = re.search(r'(\d+)\s*неделя', title)
         week_num = int(week_match.group(1)) if week_match else 1
@@ -80,38 +87,40 @@ def parse_excel_for_day(file_path, target_date_key):
                     r += 1
         return {"weekday": day_name_raw, "week": week_num, "groups": groups_data}
     except Exception as e:
-        print(f"Ошибка парсинга Excel: {e}")
+        print(f"Ошибка парсинга {file_path}: {e}")
         return None
 
 def main():
-    print("Скачиваем Excel из вашего репозитория...")
-    file_path = download_file(LOCAL_EXCEL_URL)
+    all_days = {}
+    all_groups = set()
     
-    if not file_path:
-        print("Не удалось скачать файл. Проверьте ссылку!")
+    for filename, date_key in FILES_TO_PARSE:
+        print(f"Обрабатываем {filename} для даты {date_key}...")
+        file_path = download_file(filename)
+        if file_path:
+            day_data = parse_excel(file_path, date_key)
+            if day_data and day_data["groups"]:
+                all_days[date_key] = day_data
+                all_groups.update(day_data["groups"].keys())
+                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
+            else:
+                print(f"  -> Не удалось распарсить данные из {filename}")
+        else:
+            print(f"  -> Файл {filename} не найден.")
+
+    if not all_days:
+        print("Нет данных для сохранения.")
         return
 
-    print("Файл скачан, парсим...")
-    # Берем дату из имени файла (если 1311, то 13 ноября 2026)
-    date_key = "2026-11-13" 
-    day_data = parse_excel_for_day(file_path, date_key)
-    
-    if not day_data or not day_data["groups"]:
-        print("Не удалось извлечь данные из файла.")
-        return
-
-    print(f"Успешно распарсено групп: {len(day_data['groups'])}")
-    
-    # Формируем итоговый JSON
     result = {
         "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
-        "groups": sorted(list(day_data["groups"].keys())),
-        "days": { date_key: day_data }
+        "groups": sorted(list(all_groups)),
+        "days": all_days
     }
     
     with open('schedule.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    print("Успешно сохранено в schedule.json")
+    print(f"Успешно сохранено в schedule.json. Всего дней: {len(all_days)}")
 
 if __name__ == "__main__":
     main()
