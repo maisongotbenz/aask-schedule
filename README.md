@@ -6,3 +6,4 @@
 - `wrangler.jsonc` — настройка Cloudflare (имя воркера и папка с сайтом).
 
 Ручной запуск на своём компьютере: `pip install xlrd openpyxl tzdata`, затем `python scripts/build_schedule.py`.
+# test
