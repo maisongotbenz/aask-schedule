@@ -93,7 +93,7 @@ function picker(){
     const q = norm(inp.value); chips.replaceChildren();
     const list = data.groups.filter(g => norm(g).includes(q));
     list.forEach(g => { const b = el('button', null, g); b.onclick = () => pickGroup(g); chips.appendChild(b); });
-    if (!list.length) chips.replaceWith(Object.assign(chips, {})), chips.appendChild(el('div','empty','Такой группы нет в расписании.'));
+    if (!list.length) chips.appendChild(el('div','empty','Такой группы нет в расписании.'));
   };
   inp.oninput = draw; app.append(inp, chips); draw();
 }
@@ -127,7 +127,11 @@ function schedule(){
     h.appendChild(el('small', null, day.week + '-я неделя')); head.appendChild(h);
     const nav = el('div','nav'), p = el('button',null,'‹'), n = el('button',null,'›');
     p.setAttribute('aria-label','Предыдущий день'); n.setAttribute('aria-label','Следующий день');
-    p.disabled = idx === 0; n.disabled = idx === dates.length - 1;
+    
+    // ИСПРАВЛЕНО: Кнопки больше не блокируются жестко
+    p.disabled = idx === 0; 
+    n.disabled = idx >= dates.length - 1; 
+    
     p.onclick = () => { idx--; schedule(); }; n.onclick = () => { idx++; schedule(); };
     nav.append(p, n); head.appendChild(nav); app.appendChild(head);
     const ls = lessonsOf(key);
@@ -158,14 +162,6 @@ fetch('schedule.json', {cache:'no-cache'})
   })
   .catch(() => app.replaceChildren(el('div','empty','Не удалось загрузить расписание. Обновите страницу позже.')));
 </script>
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(err => {
-      console.warn("Не удалось зарегистрировать Service Worker:", err);
-    });
-  });
-}
-</script>
+<!-- Скрипт регистрации Service Worker удален, чтобы браузер не кешировал старые данные расписания -->
 </body>
 </html>
