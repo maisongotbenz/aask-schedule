@@ -3,7 +3,7 @@ import json
 import re
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 
 def download_and_parse(date_str):
@@ -27,9 +27,8 @@ def download_and_parse(date_str):
         except Exception as e:
             print(f"Не удалось прочитать как Excel: {e}")
         
-        # 2. Если не вышло - пробуем как HTML (часто сайты отдают HTML под видом .xls)
+        # 2. Если не вышло - пробуем как HTML
         try:
-            # Пробуем разные кодировки
             for enc in ['cp1251', 'utf-8', 'latin1']:
                 try:
                     html_content = r.content.decode(enc, errors='ignore')
@@ -47,4 +46,104 @@ def download_and_parse(date_str):
         print(f"Ошибка при скачивании: {e}")
         return None
 
-# ... остальной код парсинга (parse_dataframe и main) оставьте без изменений ...
+def parse_dataframe(df, date_key):
+    try:
+        # Ищем заголовок
+        title = ""
+        for i in range(min(10, len(df))):
+            row_str = " ".join([str(x) for x in df.iloc[i].values if not pd.isna(x)])
+            if "неделя" in row_str.lower():
+                title = row_str
+                break
+        
+        week = int(re.search(r'(\d+)\s*неделя', title).group(1)) if re.search(r'(\d+)\s*неделя', title) else 1
+        weekday = "четверг"
+        for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
+            if d in title.lower(): weekday = d; break
+        
+        groups = {}
+        block_starts = [r for r in range(len(df)) if str(df.iloc[r, 0]).strip() == "№ пары"]
+        
+        for i, start in enumerate(block_starts):
+            end = block_starts[i+1] if i+1 < len(block_starts) else len(df)
+            
+            cols = []
+            for c in range(1, len(df.columns)):
+                val = df.iloc[start, c]
+                if not pd.isna(val):
+                    gname = str(val).strip()
+                    if gname and gname != "nan":
+                        cols.append((c, gname))
+            
+            r = start + 1
+            while r < end - 1:
+                num_str = str(df.iloc[r, 0]).strip()
+                if num_str.isdigit() and 1 <= int(num_str) <= 7:
+                    num = int(num_str)
+                    for c, gname in cols:
+                        subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
+                        t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
+                        
+                        if subj or t_info:
+                            t = t_info
+                            rm = ""
+                            p = None
+                            if "(п/п)" in t or "подгруппа" in t.lower(): p = 1
+                            room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
+                            if room_match:
+                                rm = room_match.group(1)
+                                t = t.replace(room_match.group(0), '').strip()
+                            t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
+                            
+                            item = {"n": num, "s": subj, "t": t, "r": rm}
+                            if p: item["p"] = p
+                            
+                            if gname not in groups: groups[gname] = []
+                            if not any(x["n"] == num and x["s"] == subj for x in groups[gname]):
+                                groups[gname].append(item)
+                    r += 2
+                else: 
+                    r += 1
+                    
+        return {"weekday": weekday, "week": week, "groups": groups}
+    except Exception as e:
+        print(f"Ошибка парсинга: {e}")
+        return None
+
+def main():
+    all_days = {}
+    all_groups = set()
+    
+    now = datetime.now()
+    # Пробуем скачать на 5 дней вперед (пропуская выходные, если файлов нет)
+    for i in range(5):
+        target = now + timedelta(days=i)
+        date_str = target.strftime("%d%m")
+        date_key = target.strftime("%Y-%m-%d")
+        
+        print(f"\n--- Пробуем {date_str} ({date_key}) ---")
+        df = download_and_parse(date_str)
+        
+        if df is not None:
+            day_data = parse_dataframe(df, date_key)
+            if day_data and day_data['groups']:
+                all_days[date_key] = day_data
+                all_groups.update(day_data['groups'].keys())
+                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
+
+    if not all_days:
+        print("\n!!! Нет данных для сохранения.")
+        return
+
+    res = {
+        "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
+        "groups": sorted(list(all_groups)),
+        "days": all_days
+    }
+    
+    with open('schedule.json', 'w', encoding='utf-8') as f:
+        json.dump(res, f, ensure_ascii=False, indent=2)
+    print(f"\nГотово! Сохранено дней: {len(all_days)}")
+
+if __name__ == "__main__":
+    main()
