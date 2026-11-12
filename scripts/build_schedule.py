@@ -5,7 +5,6 @@ import requests
 import xlrd
 from datetime import datetime
 
-# Список файлов, которые мы скачаем из вашего репозитория
 FILES = [
     {"file": "1211.xls", "date": "2026-11-12"},
     {"file": "1311.xls", "date": "2026-11-13"},
@@ -13,14 +12,20 @@ FILES = [
 
 def download_file(filename):
     url = f"https://raw.githubusercontent.com/maisongotbenz/aask-schedule/main/{filename}"
+    print(f"Пытаемся скачать: {url}")
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=15)
+        print(f"Статус ответа: {r.status_code}")
         if r.status_code == 200:
             path = f"/tmp/{filename}"
-            with open(path, 'wb') as f: f.write(r.content)
+            with open(path, 'wb') as f: 
+                f.write(r.content)
+            print(f"Файл сохранен: {path} (размер: {len(r.content)} байт)")
             return path
+        else:
+            print(f"Ошибка! Сервер вернул статус {r.status_code}")
     except Exception as e:
-        print(f"Ошибка загрузки {filename}: {e}")
+        print(f"Исключение при скачивании {filename}: {e}")
     return None
 
 def parse_teacher(cell):
@@ -32,12 +37,13 @@ def parse_teacher(cell):
     return teacher, room, p
 
 def parse_excel(path, date_key):
-    if not path or not os.path.exists(path): return None
+    if not path or not os.path.exists(path): 
+        print(f"Файл {path} не существует")
+        return None
     try:
         wb = xlrd.open_workbook(path)
         sh = wb.sheet_by_index(0)
         
-        # Берем заголовок из первой строки
         title = str(sh.cell_value(0, 8))
         week = int(re.search(r'(\d+)\s*неделя', title).group(1)) if re.search(r'(\d+)\s*неделя', title) else 1
         
@@ -80,17 +86,21 @@ def main():
     all_groups = set()
     
     for item in FILES:
-        print(f"Скачиваем {item['file']}...")
+        print(f"--- Обработка {item['file']} ---")
         path = download_file(item['file'])
         if path:
             day_data = parse_excel(path, item['date'])
             if day_data and day_data['groups']:
                 all_days[item['date']] = day_data
                 all_groups.update(day_data['groups'].keys())
-                print(f"  -> {item['date']} успешно добавлен (групп: {len(day_data['groups'])})")
-    
+                print(f"  -> Успешно добавлен день {item['date']} (групп: {len(day_data['groups'])})")
+            else:
+                print(f"  -> Не удалось распарсить данные из {item['file']}")
+        else:
+            print(f"  -> Файл {item['file']} не был скачан.")
+
     if not all_days:
-        print("Нет данных.")
+        print("!!! Нет данных для сохранения. Файл schedule.json не изменен.")
         return
 
     res = {
