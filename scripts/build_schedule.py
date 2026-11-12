@@ -1,141 +1,547 @@
-import os
+
 import json
 import re
+import sys
+from io import BytesIO, StringIO
+from datetime import datetime, timedelta
+from pathlib import Path
+from urllib.parse import urljoin
+
 import requests
 import pandas as pd
-from datetime import datetime
-from io import StringIO
+from bs4 import BeautifulSoup
 
-BASE_URL = "https://altask.ru/DO/"
 
-def download_and_parse(date_str):
-    url = f"{BASE_URL}{date_str}.xls"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+# --------------------------------------------------
+# НАСТРОЙКИ
+# --------------------------------------------------
+
+BASE_URL = "https://altask.ru"
+
+# Страница расписания колледжа с параметром даты.
+PAGE_URL_TEMPLATE = (
+    "https://altask.ru/index.php/staff/"
+    "1563-11-11-2026?date={date}-00-00"
+)
+
+OUTPUT_FILE = Path("public/schedule.json")
+
+DAYS_AHEAD = 14
+
+# Все четыре раздела официального расписания.
+SECTIONS = {
+    "DO": "Дневное отделение",
+    "PB": "Пожарная безопасность",
+    "EAL": "ППКРС Э. Алексеевой",
+    "PS": "ППКРС П. Сухова",
+}
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
+    )
+}
+
+session = requests.Session()
+session.headers.update(HEADERS)
+
+
+# --------------------------------------------------
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# --------------------------------------------------
+
+def cell_text(value):
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def weekday_name(date_key):
+    names = [
+        "понедельник",
+        "вторник",
+        "среда",
+        "четверг",
+        "пятница",
+        "суббота",
+        "воскресенье",
+    ]
+    date = datetime.strptime(date_key, "%Y-%m-%d")
+    return names[date.weekday()]
+
+
+def get_week_number(text):
+    match = re.search(r"(\d+)\s*[-]?\s*недел", text.lower())
+    return int(match.group(1)) if match else 1
+
+
+# --------------------------------------------------
+# ПОИСК ССЫЛОК НА ОФИЦИАЛЬНОЙ СТРАНИЦЕ
+# --------------------------------------------------
+
+def find_excel_links(date_key):
+    page_url = PAGE_URL_TEMPLATE.format(date=date_key)
+
+    print(f"Открываем страницу: {date_key}")
+
     try:
-        r = requests.get(url, headers=headers, timeout=15)
-        if r.status_code != 200:
-            print(f"Файл {date_str}.xls не найден (Статус: {r.status_code})")
-            return None
-        
-        # Пытаемся прочитать как Excel или HTML
+        response = session.get(page_url, timeout=30)
+        response.raise_for_status()
+    except requests.RequestException as error:
+        print(f"Ошибка открытия страницы: {error}")
+        return None
+
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    result = {}
+
+    for section in SECTIONS:
+        result[section] = []
+
+    # Ищем настоящие ссылки на Excel.
+    for anchor in soup.find_all("a", href=True):
+        href = anchor["href"].strip()
+
+        if not re.search(r"\.xls(?:\?|$)", href, re.I):
+            continue
+
+        full_url = urljoin(page_url, href)
+
+        match = re.search(
+            r"/(DO|PB|EAL|PS)/([^/?]+\.xls)",
+            full_url,
+            re.I,
+        )
+
+        if not match:
+            continue
+
+        section = match.group(1).upper()
+
+        if section in result:
+            if full_url not in result[section]:
+                result[section].append(full_url)
+
+    for section, links in result.items():
+        print(
+            f"  {SECTIONS[section]}: "
+            f"{len(links)} файлов"
+        )
+
+    return result
+
+
+# --------------------------------------------------
+# СКАЧИВАНИЕ EXCEL
+# --------------------------------------------------
+
+def download_excel(url):
+    try:
+        response = session.get(url, timeout=45)
+        response.raise_for_status()
+
+        if not response.content:
+            raise ValueError("Пустой файл")
+
+        content = response.content
+
+        # Сначала пробуем настоящий Excel XLS.
         try:
-            df = pd.read_excel(StringIO(r.content.decode('cp1251')), header=None)
+            return pd.read_excel(
+                BytesIO(content),
+                header=None,
+                engine="xlrd",
+            )
         except Exception:
-            try:
-                dfs = pd.read_html(StringIO(r.content.decode('cp1251', errors='ignore')), header=None)
-                df = dfs[0]
-            except Exception as e:
-                print(f"Не удалось прочитать файл {date_str}.xls: {e}")
-                return None
-        return df
-    except Exception as e:
-        print(f"Ошибка при скачивании {date_str}.xls: {e}")
+            pass
+
+        # Некоторые старые XLS на сайте фактически являются HTML.
+        try:
+            text = content.decode(
+                "cp1251",
+                errors="replace",
+            )
+
+            tables = pd.read_html(
+                StringIO(text),
+                header=None,
+            )
+
+            if tables:
+                return tables[0]
+
+        except Exception:
+            pass
+
+        # Дополнительная попытка UTF-8.
+        try:
+            text = content.decode(
+                "utf-8",
+                errors="replace",
+            )
+
+            tables = pd.read_html(
+                StringIO(text),
+                header=None,
+            )
+
+            if tables:
+                return tables[0]
+
+        except Exception:
+            pass
+
+        print(f"Не удалось прочитать таблицу: {url}")
         return None
 
-def parse_dataframe(df, date_key):
-    try:
-        # Ищем заголовок
-        title = ""
-        for i in range(min(10, len(df))):
-            row_str = " ".join([str(x) for x in df.iloc[i].values if not pd.isna(x)])
-            if "неделя" in row_str.lower():
-                title = row_str
-                break
-        
-        week = int(re.search(r'(\d+)\s*неделя', title).group(1)) if re.search(r'(\d+)\s*неделя', title) else 1
-        weekday = "четверг"
-        for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
-            if d in title.lower(): weekday = d; break
-        
-        groups = {}
-        
-        # Ищем ВСЕ строки, где начинается блок с группами (там, где "№ пары")
-        block_starts = []
-        for r in range(len(df)):
-            if str(df.iloc[r, 0]).strip() == "№ пары":
-                block_starts.append(r)
-        
-        for i, start in enumerate(block_starts):
-            end = block_starts[i+1] if i+1 < len(block_starts) else len(df)
-            
-            # Собираем названия групп из этой строки (начиная со 2-го столбца)
-            cols = []
-            for c in range(1, len(df.columns)):
-                val = df.iloc[start, c]
-                if not pd.isna(val):
-                    gname = str(val).strip()
-                    if gname and gname != "nan":
-                        cols.append((c, gname))
-            
-            # Проходим по парам в этом блоке
-            r = start + 1
-            while r < end - 1:
-                num_str = str(df.iloc[r, 0]).strip()
-                if num_str.isdigit() and 1 <= int(num_str) <= 7:
-                    num = int(num_str)
-                    for c, gname in cols:
-                        subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
-                        t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
-                        
-                        if subj or t_info:
-                            t = t_info
-                            rm = ""
-                            p = None
-                            if "(п/п)" in t or "подгруппа" in t.lower(): p = 1
-                            room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
-                            if room_match:
-                                rm = room_match.group(1)
-                                t = t.replace(room_match.group(0), '').strip()
-                            t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
-                            
-                            item = {"n": num, "s": subj, "t": t, "r": rm}
-                            if p: item["p"] = p
-                            
-                            if gname not in groups: groups[gname] = []
-                            if not any(x["n"] == num and x["s"] == subj for x in groups[gname]):
-                                groups[gname].append(item)
-                    r += 2
-                else: 
-                    r += 1
-                    
-        return {"weekday": weekday, "week": week, "groups": groups}
-    except Exception as e:
-        print(f"Ошибка парсинга: {e}")
+    except Exception as error:
+        print(f"Ошибка скачивания {url}: {error}")
         return None
+
+
+# --------------------------------------------------
+# ОБРАБОТКА ОДНОЙ EXCEL-ТАБЛИЦЫ
+# --------------------------------------------------
+
+def parse_dataframe(df):
+    if df is None or df.empty:
+        return {}, 1
+
+    # Определяем номер недели.
+    title_parts = []
+
+    for row_index in range(min(15, len(df))):
+        row = [
+            cell_text(value)
+            for value in df.iloc[row_index].values
+        ]
+        title_parts.extend(row)
+
+    title = " ".join(title_parts)
+    week = get_week_number(title)
+
+    groups = {}
+
+    # Находим все блоки с заголовками групп.
+    block_starts = []
+
+    for row_index in range(len(df)):
+        first = cell_text(df.iloc[row_index, 0]).lower()
+        first = first.replace("№", "").replace(".", "").strip()
+
+        if first == "пары" or first == "пары ":
+            block_starts.append(row_index)
+
+        elif first in ("№ пары", "номер пары"):
+            block_starts.append(row_index)
+
+    if not block_starts:
+        print("  Не найден заголовок «№ пары»")
+        return {}, week
+
+    for block_index, start in enumerate(block_starts):
+
+        end = (
+            block_starts[block_index + 1]
+            if block_index + 1 < len(block_starts)
+            else len(df)
+        )
+
+        columns = []
+
+        # Получаем названия групп из заголовка блока.
+        for col in range(1, len(df.columns)):
+            group_name = cell_text(df.iloc[start, col])
+
+            if not group_name:
+                continue
+
+            if group_name.lower() in (
+                "nan",
+                "итого",
+                "примечание",
+            ):
+                continue
+
+            columns.append((col, group_name))
+
+        if not columns:
+            continue
+
+        row_index = start + 1
+
+        while row_index < end:
+
+            pair_text = cell_text(df.iloc[row_index, 0])
+
+            if pair_text.isdigit() and 1 <= int(pair_text) <= 8:
+
+                pair_number = int(pair_text)
+
+                for col, group_name in columns:
+
+                    subject = (
+                        cell_text(df.iloc[row_index, col])
+                        if col < len(df.columns)
+                        else ""
+                    )
+
+                    teacher_info = (
+                        cell_text(df.iloc[row_index + 1, col])
+                        if row_index + 1 < end
+                        and col < len(df.columns)
+                        else ""
+                    )
+
+                    if not subject and not teacher_info:
+                        continue
+
+                    teacher = teacher_info
+                    room = ""
+
+                    subgroup = None
+
+                    if (
+                        "(п/п)" in teacher
+                        or "подгруппа" in teacher.lower()
+                    ):
+                        subgroup = 1
+
+                    # Ищем номер аудитории.
+                    room_match = re.search(
+                        r"(?:ауд\.?\s*)?(\d+[а-яА-Я]?)\s*(?:\(|$)",
+                        teacher,
+                        re.I,
+                    )
+
+                    if room_match:
+                        room = room_match.group(1)
+
+                        teacher = (
+                            teacher[:room_match.start()]
+                            + teacher[room_match.end():]
+                        ).strip()
+
+                    teacher = re.sub(
+                        r"\s*\((?:п/п|подгруппа)\)\s*",
+                        " ",
+                        teacher,
+                        flags=re.I,
+                    ).strip()
+
+                    item = {
+                        "n": pair_number,
+                        "s": subject,
+                        "t": teacher,
+                        "r": room,
+                    }
+
+                    if subgroup:
+                        item["p"] = subgroup
+
+                    groups.setdefault(group_name, [])
+
+                    # Не теряем разные подгруппы и преподавателей.
+                    if item not in groups[group_name]:
+                        groups[group_name].append(item)
+
+                row_index += 2
+
+            else:
+                row_index += 1
+
+    return groups, week
+
+
+# --------------------------------------------------
+# СБОР РАСПИСАНИЯ НА ОДИН ДЕНЬ
+# --------------------------------------------------
+
+def build_one_day(date_key):
+    links = find_excel_links(date_key)
+
+    if links is None:
+        return None
+
+    available_sections = [
+        section
+        for section, urls in links.items()
+        if urls
+    ]
+
+    if not available_sections:
+        print("  На странице нет ссылок на Excel.")
+        return None
+
+    # Не публикуем день, если отсутствует хотя бы один раздел.
+    missing = [
+        section
+        for section in SECTIONS
+        if not links[section]
+    ]
+
+    if missing:
+        print(
+            "  Неполная публикация. Отсутствуют разделы: "
+            + ", ".join(missing)
+        )
+        return None
+
+    combined_groups = {}
+    weeks = []
+
+    for section in SECTIONS:
+
+        for url in links[section]:
+
+            print(f"  Скачиваем {section}: {url}")
+
+            df = download_excel(url)
+
+            if df is None:
+                print("  Не удалось загрузить один из разделов.")
+                return None
+
+            groups, week = parse_dataframe(df)
+
+            if not groups:
+                print(
+                    f"  В разделе {section} не найдены группы."
+                )
+                return None
+
+            weeks.append(week)
+
+            for group_name, lessons in groups.items():
+
+                combined_groups.setdefault(group_name, [])
+
+                for lesson in lessons:
+                    if lesson not in combined_groups[group_name]:
+                        combined_groups[group_name].append(lesson)
+
+    if not combined_groups:
+        return None
+
+    # Сортируем занятия по номеру пары.
+    for group_name in combined_groups:
+        combined_groups[group_name].sort(
+            key=lambda lesson: lesson["n"]
+        )
+
+    # Используем наиболее часто встречающийся номер недели.
+    week_number = (
+        max(set(weeks), key=weeks.count)
+        if weeks
+        else 1
+    )
+
+    print(
+        f"  Успешно: {len(combined_groups)} групп"
+    )
+
+    return {
+        "weekday": weekday_name(date_key),
+        "week": week_number,
+        "groups": combined_groups,
+    }
+
+
+# --------------------------------------------------
+# ОСНОВНАЯ ПРОГРАММА
+# --------------------------------------------------
 
 def main():
+
+    print("=" * 55)
+    print("AASK SCHEDULE — АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ")
+    print("=" * 55)
+
+    today = datetime.now().date()
+
     all_days = {}
     all_groups = set()
-    
-    now = datetime.now()
-    for i in range(3): # Берем 3 дня (сегодня, завтра, послезавтра)
-        target = now + pd.Timedelta(days=i)
-        date_str = target.strftime("%d%m")
+
+    for offset in range(DAYS_AHEAD):
+
+        target = today + timedelta(days=offset)
+
+        # Воскресенье пропускаем.
+        if target.weekday() == 6:
+            continue
+
         date_key = target.strftime("%Y-%m-%d")
-        
-        print(f"--- Пробуем {date_str} ({date_key}) ---")
-        df = download_and_parse(date_str)
-        
-        if df is not None:
-            day_data = parse_dataframe(df, date_key)
-            if day_data and day_data['groups']:
-                all_days[date_key] = day_data
-                all_groups.update(day_data['groups'].keys())
-                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
 
+        print()
+        print(f"--- {date_key} ---")
+
+        day_data = build_one_day(date_key)
+
+        if day_data is None:
+            print("День пропущен: нет полной проверенной публикации.")
+            continue
+
+        all_days[date_key] = day_data
+
+        all_groups.update(
+            day_data["groups"].keys()
+        )
+
+    # Нельзя заменять расписание пустым результатом.
     if not all_days:
-        print("!!! Нет данных.")
-        return
+        print()
+        print("ОШИБКА: не найдено ни одного полного дня.")
+        print("Старый schedule.json оставлен без изменений.")
+        sys.exit(1)
 
-    res = {
-        "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
-        "groups": sorted(list(all_groups)),
-        "days": all_days
+    # Дополнительная проверка количества групп.
+    print()
+    print(f"Всего найдено групп: {len(all_groups)}")
+    print(f"Всего дней: {len(all_days)}")
+
+    if len(all_groups) < 2:
+        print("ОШИБКА: слишком мало групп. Файл не обновлён.")
+        sys.exit(1)
+
+    result = {
+        "updated": datetime.now().astimezone().isoformat(
+            timespec="minutes"
+        ),
+        "groups": sorted(
+            all_groups,
+            key=lambda value: value.lower()
+        ),
+        "days": all_days,
     }
-    
-    with open('schedule.json', 'w', encoding='utf-8') as f:
-        json.dump(res, f, ensure_ascii=False, indent=2)
-    print(f"Готово! Сохранено дней: {len(all_days)}")
+
+    OUTPUT_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    # Сначала записываем во временный файл.
+    temp_file = OUTPUT_FILE.with_suffix(".tmp")
+
+    with open(temp_file, "w", encoding="utf-8") as file:
+        json.dump(
+            result,
+            file,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    # Атомарно заменяем старый файл.
+    temp_file.replace(OUTPUT_FILE)
+
+    print()
+    print("=" * 55)
+    print("ОБНОВЛЕНИЕ УСПЕШНО")
+    print(f"Дней: {len(all_days)}")
+    print(f"Групп: {len(all_groups)}")
+    print(f"Файл: {OUTPUT_FILE}")
+    print("=" * 55)
+
 
 if __name__ == "__main__":
     main()
