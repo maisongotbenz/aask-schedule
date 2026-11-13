@@ -113,12 +113,11 @@ const fmt = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
 
 const app = document.getElementById('app');
-// 1. Меняем режим по умолчанию на 'news'
 let data, group = null, mode = 'news', dates = [], idx = 0;
 
 function pickGroup(g) {
   group = g; localStorage.setItem('group', g);
-  mode = 'news'; // 2. При выборе группы тоже открываем Новости
+  mode = 'news';
   idx = dates.findIndex(k => k >= iso(new Date()));
   if (idx === -1) idx = dates.length - 1;
   show();
@@ -148,7 +147,6 @@ function show() {
   const ch = el('button', 'link', '← Сменить группу'); ch.onclick = () => { group = null; show(); }; app.appendChild(ch);
 
   const tabs = el('div', 'tabs');
-  // 3. Меняем порядок вкладок: Новости теперь первые
   [['news', 'Новости'], ['day', 'Сегодня'], ['week', 'Неделя']].forEach(([m, t]) => {
     const b = el('button', null, t); b.setAttribute('aria-selected', mode === m);
     b.onclick = () => { mode = m; show(); }; tabs.appendChild(b);
@@ -189,6 +187,36 @@ function show() {
       });
     });
   } else if (mode === 'news') {
+    // --- БЛОК ПОДДЕРЖКИ ---
+    const quotes = [
+      "У тебя всё получится! Главное — не сдаваться. 💪",
+      "Знания — это сила. Хорошей учёбы! 📚",
+      "Даже маленький шаг вперёд — это прогресс. 🚀",
+      "Сегодня отличный день, чтобы узнать что-то новое. 🌟",
+      "Ты справишься с любой сессией! Держись! 🔥",
+      "Не забывай отдыхать. Твой мозг скажет спасибо. 🧠",
+      "Ошибки — это часть пути к успеху. Не бойся их. 🛤️",
+      "Ты молодец, что заботишься о своём расписании! 📅",
+      "Верь в себя, и всё получится. ✨",
+      "Каждая пара — это шаг к твоей будущей профессии. 🎓"
+    ];
+    
+    const dayIndex = new Date().getDate() % quotes.length;
+    
+    const quoteCard = el('div', 'lesson'); 
+    quoteCard.style.gridTemplateColumns = '1fr';
+    quoteCard.style.background = 'var(--mark)';
+    quoteCard.style.color = 'var(--markink)';
+    quoteCard.style.border = 'none';
+    
+    const quoteContent = el('div');
+    quoteContent.style.cssText = 'text-align: center; font-size: 17px; font-weight: 700; padding: 8px;';
+    quoteContent.textContent = quotes[dayIndex];
+    
+    quoteCard.appendChild(quoteContent);
+    app.appendChild(quoteCard);
+    // -----------------------
+
     if (!data.news || !data.news.length) {
       app.appendChild(el('div', 'empty', 'Пока новостей нет.'));
     } else {
