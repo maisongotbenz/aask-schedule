@@ -21,7 +21,6 @@ def download_and_parse(date_str):
         
         # 1. Пытаемся прочитать как Excel (бинарный формат)
         try:
-            # Передаем BytesIO, чтобы pandas сам разобрался с кодировкой
             df = pd.read_excel(BytesIO(r.content), header=None)
             print("Excel успешно прочитан.")
             return df
@@ -132,15 +131,46 @@ def main():
         print("\n!!! Нет данных для сохранения.")
         return
 
+    # --- ГЕНЕРАЦИЯ НОВОСТЕЙ ---
+    news = []
+    old_data = {}
+    if os.path.exists('schedule.json'):
+        try:
+            with open('schedule.json', 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+        except: pass
+
+    old_days = set(old_data.get('days', {}).keys())
+    new_days = set(all_days.keys())
+    
+    added_days = new_days - old_days
+    for day_key in sorted(added_days):
+        day_info = all_days[day_key]
+        date_obj = datetime.strptime(day_key, '%Y-%m-%d')
+        date_str = date_obj.strftime('%d.%m')
+        news.append({
+            "date": datetime.now().strftime('%Y-%m-%d'),
+            "text": f"Появилось расписание на {date_str} ({day_info['weekday']})."
+        })
+    
+    if not old_data:
+        news.append({"date": datetime.now().strftime('%Y-%m-%d'), "text": "Добро пожаловать! Расписание успешно загружено."})
+
+    old_news = old_data.get('news', [])
+    all_news = news + old_news
+    all_news = all_news[:10] # Оставляем только 10 последних новостей
+    
+    # --- ФОРМИРУЕМ ИТОГОВЫЙ JSON ---
     res = {
         "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
         "groups": sorted(list(all_groups)),
-        "days": all_days
+        "days": all_days,
+        "news": all_news
     }
     
     with open('schedule.json', 'w', encoding='utf-8') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
-    print(f"\nГотово! Сохранено дней: {len(all_days)}")
+    print(f"\nГотово! Сохранено дней: {len(all_days)}. Новостей: {len(all_news)}")
 
 if __name__ == "__main__":
     main()
