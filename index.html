@@ -59,6 +59,8 @@ button { font: inherit; cursor: pointer; color: inherit; border: none; backgroun
 .subject { font-weight: 600; font-size: 17px; margin-bottom: 6px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--mute); font-size: 14px; }
 
+.time { font-size: 13px; color: var(--steel); font-weight: 700; margin-bottom: 4px; }
+
 .room { padding: 4px 10px; border-radius: 8px; background: var(--line); font-weight: 600; font-size: 13px; }
 .tag { padding: 4px 10px; border-radius: 8px; background: rgba(0, 113, 227, 0.1); color: var(--steel); font-weight: 600; font-size: 13px; }
 
@@ -123,6 +125,30 @@ function pickGroup(g) {
   show();
 }
 
+// Функция для создания карточки пары с звонками
+function createLessonCard(lesson, weekday) {
+  const c = el('div', 'lesson');
+  c.appendChild(el('div', 'num', lesson.n));
+  
+  const b = el('div');
+  // Добавляем время звонка
+  const bl = bellsFor(weekday)[lesson.n];
+  if (bl) {
+    const time = el('div', 'time', bl[0] + '–' + bl[1]);
+    b.appendChild(time);
+  }
+  
+  b.appendChild(el('div', 'subject', lesson.s));
+  
+  const m = el('div', 'meta');
+  if (lesson.r) m.appendChild(el('span', 'room', 'ауд. ' + lesson.r));
+  if (lesson.t) m.appendChild(el('span', null, lesson.t));
+  
+  b.appendChild(m);
+  c.appendChild(b);
+  return c;
+}
+
 function show() {
   if (!group) {
     document.getElementById('title').textContent = 'Расписание ААСК';
@@ -167,27 +193,18 @@ function show() {
     
     const ls = data.days[key].groups[group] || [];
     if (!ls.length) app.appendChild(el('div', 'empty', 'Занятий нет.'));
-    ls.forEach(l => {
-      const c = el('div', 'lesson'); c.appendChild(el('div', 'num', l.n));
-      const b = el('div'); b.appendChild(el('div', 'subject', l.s));
-      const m = el('div', 'meta'); if (l.r) m.appendChild(el('span', 'room', 'ауд. ' + l.r)); if (l.t) m.appendChild(el('span', null, l.t));
-      b.appendChild(m); c.appendChild(b); app.appendChild(c);
-    });
+    ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
+    
   } else if (mode === 'week') {
     const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
     let list = dates.filter(k => k >= iso(mon) && k <= iso(sun)); if (!list.length) list = dates.slice(-7);
     list.forEach(k => { const d = data.days[k];
       app.appendChild(el('h2', null, cap(d.weekday) + ', ' + fmt(k))).style.cssText = 'margin: 20px 0 10px; font-size: 18px;';
       const ls = data.days[k].groups[group] || []; if (!ls.length) app.appendChild(el('div', 'empty', 'Занятий нет.'));
-      ls.forEach(l => {
-        const c = el('div', 'lesson'); c.appendChild(el('div', 'num', l.n));
-        const b = el('div'); b.appendChild(el('div', 'subject', l.s));
-        const m = el('div', 'meta'); if (l.r) m.appendChild(el('span', 'room', 'ауд. ' + l.r)); if (l.t) m.appendChild(el('span', null, l.t));
-        b.appendChild(m); c.appendChild(b); app.appendChild(c);
-      });
+      ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
     });
+    
   } else if (mode === 'news') {
-    // --- БЛОК ПОДДЕРЖКИ ---
     const quotes = [
       "У тебя всё получится! Главное — не сдаваться. 💪",
       "Знания — это сила. Хорошей учёбы! 📚",
@@ -202,7 +219,6 @@ function show() {
     ];
     
     const dayIndex = new Date().getDate() % quotes.length;
-    
     const quoteCard = el('div', 'lesson'); 
     quoteCard.style.gridTemplateColumns = '1fr';
     quoteCard.style.background = 'var(--mark)';
@@ -215,7 +231,6 @@ function show() {
     
     quoteCard.appendChild(quoteContent);
     app.appendChild(quoteCard);
-    // -----------------------
 
     if (!data.news || !data.news.length) {
       app.appendChild(el('div', 'empty', 'Пока новостей нет.'));
