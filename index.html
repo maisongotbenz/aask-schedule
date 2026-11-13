@@ -113,11 +113,12 @@ const fmt = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
 
 const app = document.getElementById('app');
-let data, group = null, mode = 'day', dates = [], idx = 0;
+// 1. Меняем режим по умолчанию на 'news'
+let data, group = null, mode = 'news', dates = [], idx = 0;
 
 function pickGroup(g) {
   group = g; localStorage.setItem('group', g);
-  mode = 'day';
+  mode = 'news'; // 2. При выборе группы тоже открываем Новости
   idx = dates.findIndex(k => k >= iso(new Date()));
   if (idx === -1) idx = dates.length - 1;
   show();
@@ -147,7 +148,8 @@ function show() {
   const ch = el('button', 'link', '← Сменить группу'); ch.onclick = () => { group = null; show(); }; app.appendChild(ch);
 
   const tabs = el('div', 'tabs');
-  [['day', 'Сегодня'], ['week', 'Неделя'], ['news', 'Новости']].forEach(([m, t]) => {
+  // 3. Меняем порядок вкладок: Новости теперь первые
+  [['news', 'Новости'], ['day', 'Сегодня'], ['week', 'Неделя']].forEach(([m, t]) => {
     const b = el('button', null, t); b.setAttribute('aria-selected', mode === m);
     b.onclick = () => { mode = m; show(); }; tabs.appendChild(b);
   });
