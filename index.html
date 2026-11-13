@@ -16,7 +16,7 @@
 <style>
 /* --- БАЗОВЫЕ ПЕРЕМЕННЫЕ (СВЕТЛАЯ ТЕМА) --- */
 :root {
-  --bg: #f5f5f7; /* Фон как в Apple */
+  --bg: #f5f5f7;
   --card: #ffffff;
   --ink: #1d1d1f;
   --mute: #86868b;
@@ -28,7 +28,7 @@
   --radius: 16px;
 }
 
-/* --- ТЕМНАЯ ТЕМА (автоматически или вручную) --- */
+/* --- ТЕМНАЯ ТЕМА --- */
 [data-theme="dark"] {
   --bg: #000000;
   --card: #1c1c1e;
@@ -54,14 +54,47 @@ body {
 
 main { max-width: 600px; margin: 0 auto; padding: 20px 16px 60px; }
 
+/* --- УВЕДОМЛЕНИЕ --- */
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--mark);
+  color: var(--markink);
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(242, 183, 5, 0.3);
+  animation: slideDown 0.4s ease-out;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.notification button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--markink);
+  opacity: 0.6;
+  padding: 0 4px;
+  transition: opacity 0.2s;
+}
+.notification button:hover { opacity: 1; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* --- ТИПОГРАФИКА --- */
 h1 { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -0.5px; }
 .sub { margin-top: 6px; color: var(--mute); font-size: 15px; font-weight: 500; }
 
-/* --- КНОПКИ И ИНТЕРФЕЙС --- */
+/* --- КНОПКИ --- */
 button { font: inherit; cursor: pointer; color: inherit; border: none; background: none; transition: all 0.2s; }
 button:active { transform: scale(0.97); }
-
 .link { color: var(--steel); font-weight: 600; padding: 8px 0; display: inline-block; }
 .link:hover { opacity: 0.8; }
 
@@ -94,12 +127,12 @@ button:active { transform: scale(0.97); }
 }
 .chips button:hover { border-color: var(--steel); }
 
-/* --- ШАПКА ДНЯ (Липкая) --- */
+/* --- ШАПКА ДНЯ --- */
 .dayhead {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 0; margin-bottom: 12px;
-  background: var(--bg); /* Перекрываем фон при скролле */
+  background: var(--bg);
   border-bottom: 1px solid transparent;
 }
 .dayhead h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
@@ -114,7 +147,7 @@ button:active { transform: scale(0.97); }
 }
 .nav button:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
 
-/* --- КАРТОЧКА ПАРЫ (С анимацией) --- */
+/* --- КАРТОЧКА ПАРЫ --- */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -153,7 +186,7 @@ button:active { transform: scale(0.97); }
   font-weight: 600; font-size: 13px;
 }
 
-/* --- ПУСТЫЕ СОСТОЯНИЯ И ЗАМЕТКИ --- */
+/* --- ПУСТЫЕ СОСТОЯНИЯ --- */
 .note, .empty {
   padding: 20px; border-radius: var(--radius);
   background: var(--card); color: var(--mute);
@@ -161,7 +194,7 @@ button:active { transform: scale(0.97); }
   box-shadow: var(--shadow); margin-bottom: 16px;
 }
 
-/* --- ТЕМНАЯ ТЕМА (Кнопка переключения) --- */
+/* --- ПЕРЕКЛЮЧАТЕЛЬ ТЕМ --- */
 .theme-toggle {
   position: absolute; top: 20px; right: 20px;
   width: 44px; height: 44px; border-radius: 50%;
@@ -175,7 +208,7 @@ footer { margin-top: 40px; font-size: 13px; color: var(--mute); text-align: cent
 footer a { color: var(--steel); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
 
-/* Адаптив для маленьких экранов */
+/* Адаптив */
 @media (max-width: 400px) {
   h1 { font-size: 26px; }
   .lesson { grid-template-columns: 48px 1fr; padding: 12px; }
@@ -188,6 +221,12 @@ footer a:hover { text-decoration: underline; }
 <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">🌙</button>
 
 <main>
+  <!-- Блок для уведомления -->
+  <div id="notification-banner" class="notification" style="display: none;">
+    <span>🎉 Появилось расписание на новый день!</span>
+    <button onclick="document.getElementById('notification-banner').style.display='none'">✕</button>
+  </div>
+
   <h1 id="title">Расписание ААСК</h1>
   <p class="sub" id="sub">Алтайский архитектурно-строительный колледж</p>
   
@@ -234,7 +273,7 @@ const fmt = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.innerHTML = x; return e; };
 const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
 
-// --- SVG ИКОНКИ ---
+// --- ИКОНКИ ---
 const ICONS = {
   room: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 19V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v15H3v2h18v-2h-2zm-7-9a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>',
   teacher: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
@@ -347,13 +386,41 @@ function schedule(){
 }
 const show = () => group ? schedule() : picker();
 
-// --- ЗАГРУЗКА ДАННЫХ ---
+// --- ЗАГРУЗКА ДАННЫХ И УВЕДОМЛЕНИЯ ---
 fetch('schedule.json', {cache:'no-cache'})
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(j => {
     data = j; dates = Object.keys(j.days).sort();
     data.groups = j.groups.slice().sort((a,b) => a.localeCompare(b,'ru',{numeric:true}));
-    if (j.updated) document.getElementById('upd').innerHTML = '<br><span style="font-size:12px;opacity:0.7;">Обновлено: ' + new Date(j.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) + '</span>';
+    
+    if (j.updated) {
+        document.getElementById('upd').innerHTML = '<br><span style="font-size:12px;opacity:0.7;">Обновлено: ' + new Date(j.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) + '</span>';
+    }
+
+    // --- ЛОГИКА УВЕДОМЛЕНИЙ О НОВОМ ДНЕ ---
+    if (dates.length > 0) {
+      const latestDate = dates[dates.length - 1]; // Самый новый день
+      const lastSeenDate = localStorage.getItem('lastSeenScheduleDate');
+      
+      if (!lastSeenDate) {
+        // Первый заход, просто запоминаем
+        localStorage.setItem('lastSeenScheduleDate', latestDate);
+      } else if (lastSeenDate !== latestDate) {
+        // Появился новый день!
+        const banner = document.getElementById('notification-banner');
+        if (banner) {
+          const [y, m, d] = latestDate.split('-').map(Number);
+          const dateStr = new Date(y, m-1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+          
+          banner.querySelector('span').textContent = `🎉 Появилось расписание на ${dateStr}!`;
+          banner.style.display = 'flex';
+        }
+        // Запоминаем новую дату
+        localStorage.setItem('lastSeenScheduleDate', latestDate);
+      }
+    }
+    // ----------------------------------------
+
     let g = null; try { g = decodeURIComponent(location.hash.slice(1)); } catch(e){}
     if (!g || !data.groups.includes(g)) g = store.get('group');
     if (g && data.groups.includes(g)) pickGroup(g); else show();
