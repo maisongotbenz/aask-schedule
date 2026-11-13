@@ -14,203 +14,82 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-/* --- БАЗОВЫЕ ПЕРЕМЕННЫЕ (СВЕТЛАЯ ТЕМА) --- */
 :root {
-  --bg: #f5f5f7;
-  --card: #ffffff;
-  --ink: #1d1d1f;
-  --mute: #86868b;
-  --line: #e5e5ea;
-  --mark: #f2b705;
-  --markink: #1d1d1f;
-  --steel: #0071e3;
-  --shadow: 0 4px 24px rgba(0,0,0,0.06);
-  --radius: 16px;
+  --bg: #f5f5f7; --card: #ffffff; --ink: #1d1d1f; --mute: #86868b;
+  --line: #e5e5ea; --mark: #f2b705; --markink: #1d1d1f; --steel: #0071e3;
+  --shadow: 0 4px 24px rgba(0,0,0,0.06); --radius: 16px;
 }
-
-/* --- ТЕМНАЯ ТЕМА --- */
 [data-theme="dark"] {
-  --bg: #000000;
-  --card: #1c1c1e;
-  --ink: #f5f5f7;
-  --mute: #86868b;
-  --line: #38383a;
-  --mark: #f2b705;
-  --markink: #000000;
-  --steel: #2997ff;
+  --bg: #000000; --card: #1c1c1e; --ink: #f5f5f7; --mute: #86868b;
+  --line: #38383a; --mark: #f2b705; --markink: #000000; --steel: #2997ff;
   --shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--bg); color: var(--ink);
   font: 16px/1.5 Onest, system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  transition: background 0.3s, color 0.3s;
+  min-height: 100vh; transition: background 0.3s, color 0.3s;
   -webkit-font-smoothing: antialiased;
 }
-
 main { max-width: 600px; margin: 0 auto; padding: 20px 16px 60px; }
 
-/* --- УВЕДОМЛЕНИЕ --- */
+/* Уведомление */
 .notification {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--mark);
-  color: var(--markink);
-  padding: 14px 18px;
-  border-radius: var(--radius);
-  margin-bottom: 20px;
-  font-weight: 600;
-  font-size: 15px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--mark); color: var(--markink);
+  padding: 14px 18px; border-radius: var(--radius);
+  margin-bottom: 20px; font-weight: 600; font-size: 15px;
   box-shadow: 0 4px 12px rgba(242, 183, 5, 0.3);
-  animation: slideDown 0.4s ease-out;
-  border: 1px solid rgba(0,0,0,0.05);
+  animation: slideDown 0.4s ease-out; border: 1px solid rgba(0,0,0,0.05);
 }
-.notification button {
-  background: none;
-  border: none;
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  color: var(--markink);
-  opacity: 0.6;
-  padding: 0 4px;
-  transition: opacity 0.2s;
-}
-.notification button:hover { opacity: 1; }
+.notification button { background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.6; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- ТИПОГРАФИКА --- */
 h1 { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -0.5px; }
 .sub { margin-top: 6px; color: var(--mute); font-size: 15px; font-weight: 500; }
 
-/* --- КНОПКИ --- */
 button { font: inherit; cursor: pointer; color: inherit; border: none; background: none; transition: all 0.2s; }
 button:active { transform: scale(0.97); }
 .link { color: var(--steel); font-weight: 600; padding: 8px 0; display: inline-block; }
-.link:hover { opacity: 0.8; }
 
-.tabs {
-  display: flex; gap: 4px; margin: 20px 0; padding: 4px;
-  background: var(--line); border-radius: 12px;
-}
-.tabs button {
-  flex: 1; padding: 10px; border-radius: 10px;
-  color: var(--mute); font-weight: 600; font-size: 15px;
-}
-.tabs button[aria-selected="true"] {
-  background: var(--card); color: var(--ink);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+.tabs { display: flex; gap: 4px; margin: 20px 0; padding: 4px; background: var(--line); border-radius: 12px; }
+.tabs button { flex: 1; padding: 10px; border-radius: 10px; color: var(--mute); font-weight: 600; font-size: 15px; }
+.tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-.search {
-  width: 100%; margin: 16px 0 12px; padding: 14px 16px;
-  border: 1px solid var(--line); border-radius: 12px;
-  background: var(--card); color: var(--ink); font: inherit;
-  box-shadow: var(--shadow); transition: border 0.2s;
-}
+.search { width: 100%; margin: 16px 0 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; box-shadow: var(--shadow); }
 .search:focus { outline: none; border-color: var(--steel); }
 
 .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-.chips button {
-  padding: 14px 8px; border: 1px solid var(--line);
-  border-radius: 12px; background: var(--card);
-  font-weight: 600; box-shadow: var(--shadow);
-}
-.chips button:hover { border-color: var(--steel); }
+.chips button { padding: 14px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-weight: 600; box-shadow: var(--shadow); }
 
-/* --- ШАПКА ДНЯ --- */
-.dayhead {
-  position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 0; margin-bottom: 12px;
-  background: var(--bg);
-  border-bottom: 1px solid transparent;
-}
-.dayhead h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.dayhead { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; margin-bottom: 12px; background: var(--bg); }
+.dayhead h2 { font-size: 22px; font-weight: 700; }
 .dayhead small { display: block; color: var(--mute); font-weight: 500; font-size: 14px; margin-top: 2px; }
 
 .nav { display: flex; gap: 8px; }
-.nav button {
-  width: 44px; height: 44px; border: 1px solid var(--line);
-  border-radius: 12px; background: var(--card);
-  display: grid; place-items: center; font-size: 20px;
-  box-shadow: var(--shadow);
-}
+.nav button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); display: grid; place-items: center; font-size: 20px; box-shadow: var(--shadow); }
 .nav button:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
 
-/* --- КАРТОЧКА ПАРЫ --- */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.lesson {
-  display: grid; grid-template-columns: 56px 1fr; gap: 16px;
-  padding: 16px; margin-bottom: 10px;
-  background: var(--card); border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  animation: slideUp 0.3s ease-out forwards;
-  border: 1px solid var(--line);
-}
-.lesson:hover { border-color: var(--mute); }
-
-.num {
-  display: grid; place-items: center; height: 56px;
-  border-radius: 12px; background: var(--mark); color: var(--markink);
-  font-size: 24px; font-weight: 800;
-}
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.lesson { display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 16px; margin-bottom: 10px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); animation: slideUp 0.3s ease-out forwards; border: 1px solid var(--line); }
+.num { display: grid; place-items: center; height: 56px; border-radius: 12px; background: var(--mark); color: var(--markink); font-size: 24px; font-weight: 800; }
 
 .subject { font-weight: 600; font-size: 17px; line-height: 1.3; margin-bottom: 6px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--mute); font-size: 14px; }
 
-/* Иконки и плашки */
 .icon { width: 16px; height: 16px; fill: currentColor; opacity: 0.7; margin-right: 4px; vertical-align: text-bottom; }
-.room {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border-radius: 8px;
-  background: var(--line); color: var(--ink); font-weight: 600; font-size: 13px;
-}
-.tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border-radius: 8px;
-  background: rgba(0, 113, 227, 0.1); color: var(--steel);
-  font-weight: 600; font-size: 13px;
-}
+.room { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; background: var(--line); color: var(--ink); font-weight: 600; font-size: 13px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; background: rgba(0, 113, 227, 0.1); color: var(--steel); font-weight: 600; font-size: 13px; }
 
-/* --- ПУСТЫЕ СОСТОЯНИЯ --- */
-.note, .empty {
-  padding: 20px; border-radius: var(--radius);
-  background: var(--card); color: var(--mute);
-  text-align: center; font-weight: 500;
-  box-shadow: var(--shadow); margin-bottom: 16px;
-}
+.note, .empty { padding: 20px; border-radius: var(--radius); background: var(--card); color: var(--mute); text-align: center; font-weight: 500; box-shadow: var(--shadow); margin-bottom: 16px; }
 
-/* --- КНОПКИ В УГЛУ --- */
-.top-controls {
-  position: absolute; top: 20px; right: 20px;
-  display: flex; gap: 10px; z-index: 20;
-}
-.icon-btn {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--card); box-shadow: var(--shadow);
-  display: grid; place-items: center; font-size: 20px;
-}
+.top-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); display: grid; place-items: center; font-size: 20px; }
 
-/* --- ПОДВАЛ --- */
 footer { margin-top: 40px; font-size: 13px; color: var(--mute); text-align: center; line-height: 1.6; }
 footer a { color: var(--steel); text-decoration: none; }
-footer a:hover { text-decoration: underline; }
 
-/* Адаптив */
 @media (max-width: 400px) {
   h1 { font-size: 26px; }
   .lesson { grid-template-columns: 48px 1fr; padding: 12px; }
@@ -226,7 +105,6 @@ footer a:hover { text-decoration: underline; }
 </div>
 
 <main>
-  <!-- Блок для уведомления -->
   <div id="notification-banner" class="notification" style="display: none;">
     <span>🎉 Появилось расписание на новый день!</span>
     <button onclick="document.getElementById('notification-banner').style.display='none'">✕</button>
@@ -266,40 +144,25 @@ themeToggle.addEventListener('click', () => {
 const notifyToggle = document.getElementById('notifyToggle');
 if ("Notification" in window) {
   notifyToggle.style.display = 'grid';
-  if (Notification.permission === 'granted') {
-    notifyToggle.textContent = '🔔';
-  } else if (Notification.permission === 'denied') {
-    notifyToggle.textContent = '🔕';
-    notifyToggle.style.opacity = '0.5';
-  }
+  if (Notification.permission === 'granted') notifyToggle.textContent = '🔔';
+  else if (Notification.permission === 'denied') { notifyToggle.textContent = '🔕'; notifyToggle.style.opacity = '0.5'; }
 }
-
 notifyToggle.addEventListener('click', () => {
   if (Notification.permission !== 'granted') {
     Notification.requestPermission().then(permission => {
       if (permission === 'granted') {
-        notifyToggle.textContent = '🔔';
-        notifyToggle.style.opacity = '1';
-        new Notification("Уведомления включены!", {
-          body: "Теперь мы напомним вам о начале пары за 5 минут.",
-          icon: "/icons/apple-touch-icon.png"
-        });
-      } else {
-        notifyToggle.textContent = '🔕';
-        notifyToggle.style.opacity = '0.5';
-      }
+        notifyToggle.textContent = '🔔'; notifyToggle.style.opacity = '1';
+        new Notification("Уведомления включены!", { body: "Напомним о начале пары за 5 минут." });
+      } else { notifyToggle.textContent = '🔕'; notifyToggle.style.opacity = '0.5'; }
     });
   }
 });
 
-// --- ЗВОНКИ ---
 const BELLS = {
   mon: {1:['8:45','10:15'],2:['10:25','12:05'],3:['12:50','14:20'],4:['14:40','16:10'],5:['16:15','17:45']},
   std: {1:['8:00','9:30'],2:['9:35','11:15'],3:['11:35','13:15'],4:['13:35','15:05'],5:['15:25','16:55'],6:['17:00','18:30']}
 };
 const bellsFor = w => w === 'понедельник' ? BELLS.mon : (['суббота','воскресенье'].includes(w) ? {} : BELLS.std);
-
-// --- ХЕЛПЕРЫ ---
 const LAT = {a:'а',c:'с',e:'е',p:'р',o:'о',x:'х',k:'к',m:'м',t:'т',b:'в',h:'н'};
 const norm = s => s.toLowerCase().replace(/[^a-zа-яё0-9]/g,'').replace(/[acepoxkmtbh]/g, ch => LAT[ch]);
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -308,14 +171,12 @@ const fmt = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.innerHTML = x; return e; };
 const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
 
-// --- ИКОНКИ ---
 const ICONS = {
   room: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 19V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v15H3v2h18v-2h-2zm-7-9a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>',
   teacher: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
   subgroup: '<svg class="icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>'
 };
 
-// --- ОСНОВНАЯ ЛОГИКА ---
 const app = document.getElementById('app');
 let data, group = null, mode = 'day', dates = [], idx = 0;
 let notifiedLessons = new Set();
@@ -334,13 +195,13 @@ function picker(){
   document.getElementById('sub').style.display = 'block';
   app.replaceChildren();
   app.appendChild(el('p', 'sub', 'Выберите свою группу — сайт запомнит выбор.'));
-  const inp = el('input', 'search'); inp.type = 'search'; inp.placeholder = 'Найдите группу (например, ЗУ-31)'; inp.setAttribute('aria-label','Поиск группы');
+  const inp = el('input', 'search'); inp.type = 'search'; inp.placeholder = 'Найдите группу (например, ЗУ-31)';
   const chips = el('div', 'chips');
   const draw = () => {
     const q = norm(inp.value); chips.replaceChildren();
     const list = data.groups.filter(g => norm(g).includes(q));
     list.forEach(g => { const b = el('button', null, g); b.onclick = () => pickGroup(g); chips.appendChild(b); });
-    if (!list.length) chips.appendChild(el('div','empty','Такой группы нет в расписании.'));
+    if (!list.length) chips.appendChild(el('div','empty','Такой группы нет.'));
   };
   inp.oninput = draw; app.append(inp, chips); draw();
 }
@@ -348,29 +209,14 @@ function picker(){
 function lessonCard(l, weekday){
   const c = el('div','lesson'); c.appendChild(el('div','num',l.n));
   const b = el('div'), bl = bellsFor(weekday)[l.n];
-  
-  if (bl) {
-    const time = el('div', 'time', bl[0] + '–' + bl[1]);
-    time.style.cssText = 'font-size:13px; color:var(--steel); font-weight:700; margin-bottom:4px;';
-    b.appendChild(time);
-  }
-  
+  if (bl) { const time = el('div', null, bl[0] + '–' + bl[1]); time.style.cssText = 'font-size:13px; color:var(--steel); font-weight:700; margin-bottom:4px;'; b.appendChild(time); }
   const s = el('div','subject', l.s);
-  if (l.p) {
-    const tag = el('span', 'tag', ICONS.subgroup + ' подгруппа');
-    s.appendChild(tag);
-  }
+  if (l.p) s.appendChild(el('span', 'tag', ICONS.subgroup + ' подгруппа'));
   b.appendChild(s);
-  
   const m = el('div','meta');
   if (l.r) m.appendChild(el('span', 'room', ICONS.room + ' ' + l.r));
-  if (l.t) {
-    const t = el('span', null, ICONS.teacher + ' ' + l.t);
-    t.style.cssText = 'display:inline-flex; align-items:center; gap:4px;';
-    m.appendChild(t);
-  }
-  b.appendChild(m);
-  c.appendChild(b); return c;
+  if (l.t) { const t = el('span', null, ICONS.teacher + ' ' + l.t); t.style.cssText = 'display:inline-flex; align-items:center; gap:4px;'; m.appendChild(t); }
+  b.appendChild(m); c.appendChild(b); return c;
 }
 const lessonsOf = k => (data.days[k].groups[group] || []);
 
@@ -382,7 +228,7 @@ function schedule(){
   const ch = el('button','link','← Сменить группу'); ch.onclick = resetGroup; app.appendChild(ch);
   
   const tabs = el('div','tabs'); tabs.setAttribute('role','tablist');
-  [['day','Сегодня'],['week','Неделя']].forEach(([m,t]) => {
+  [['day','Сегодня'],['week','Неделя'],['news','Новости']].forEach(([m,t]) => {
     const b = el('button',null,t); b.setAttribute('role','tab'); b.setAttribute('aria-selected', mode === m);
     b.onclick = () => { mode = m; schedule(); }; tabs.appendChild(b);
   });
@@ -393,21 +239,17 @@ function schedule(){
   
   if (mode === 'day'){
     const key = dates[idx], day = data.days[key];
-    if (key !== t) app.appendChild(el('div','note', key > t ? 'На сегодня файла с расписанием нет. Показываю ближайший день.' : 'Расписание на сегодня ещё не загружено. Показываю последний загруженный день.'));
-    
+    if (key !== t) app.appendChild(el('div','note', key > t ? 'На сегодня файла нет. Показываю ближайший день.' : 'Расписание ещё не загружено. Показываю последний день.'));
     const head = el('div','dayhead'), h = el('h2', null, cap(day.weekday) + ', ' + fmt(key));
     h.appendChild(el('small', null, day.week + '-я неделя')); head.appendChild(h);
-    
     const nav = el('div','nav'), p = el('button',null,'‹'), n = el('button',null,'›');
-    p.setAttribute('aria-label','Предыдущий день'); n.setAttribute('aria-label','Следующий день');
     p.disabled = idx === 0; n.disabled = idx >= dates.length - 1; 
     p.onclick = () => { idx--; schedule(); }; n.onclick = () => { idx++; schedule(); };
     nav.append(p, n); head.appendChild(nav); app.appendChild(head);
-    
     const ls = lessonsOf(key);
-    if (!ls.length) app.appendChild(el('div','empty','У группы ' + group + ' в этот день занятий нет.'));
+    if (!ls.length) app.appendChild(el('div','empty','Занятий нет.'));
     ls.forEach(l => app.appendChild(lessonCard(l, day.weekday)));
-  } else {
+  } else if (mode === 'week') {
     const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
     let list = dates.filter(k => k >= iso(mon) && k <= iso(sun)); if (!list.length) list = dates.slice(-7);
     const w = el('div','week');
@@ -418,52 +260,58 @@ function schedule(){
       const ls = lessonsOf(k); if (!ls.length) w.appendChild(el('div','empty','Занятий нет.'));
       ls.forEach(l => w.appendChild(lessonCard(l, d.weekday))); });
     app.appendChild(w);
+  } else if (mode === 'news') {
+    const newsContainer = el('div', 'news-list');
+    if (!data.news || data.news.length === 0) {
+      newsContainer.appendChild(el('div', 'empty', 'Пока новостей нет.'));
+    } else {
+      data.news.forEach(n => {
+        const card = el('div', 'lesson');
+        card.style.gridTemplateColumns = '1fr';
+        const content = el('div');
+        const [y, m, d] = n.date.split('-').map(Number);
+        const dateStr = new Date(y, m-1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        const time = el('div', null, dateStr); time.style.cssText = 'font-size:13px; color:var(--steel); font-weight:700; margin-bottom:4px;';
+        content.appendChild(time);
+        content.appendChild(el('div', 'subject', n.text));
+        card.appendChild(content);
+        newsContainer.appendChild(card);
+      });
+    }
+    app.appendChild(newsContainer);
   }
 }
 const show = () => group ? schedule() : picker();
 
-// --- ПРОВЕРКА НАПОМИНАНИЙ ---
 function checkUpcomingLessons() {
   if (Notification.permission !== 'granted' || !group || !data || mode !== 'day') return;
-  
   const todayStr = iso(new Date());
   if (!data.days[todayStr] || !data.days[todayStr].groups[group]) return;
-  
   const todayLessons = data.days[todayStr].groups[group];
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  
   const bells = bellsFor(data.days[todayStr].weekday);
-  
   todayLessons.forEach(lesson => {
     const lessonBells = bells[lesson.n];
     if (!lessonBells) return;
-    
     const [startH, startM] = lessonBells[0].split(':').map(Number);
     const startMinutes = startH * 60 + startM;
     const diff = startMinutes - currentMinutes;
-    
-    // Напоминаем, если до пары осталось от 1 до 5 минут
     if (diff > 0 && diff <= 5) {
       const uniqueId = `${todayStr}_${lesson.n}`;
-      
       if (!notifiedLessons.has(uniqueId)) {
         notifiedLessons.add(uniqueId);
-        
         new Notification(`Скоро ${lesson.n}-я пара!`, {
           body: `${lesson.s}\nАудитория: ${lesson.r || 'не указана'}\nНачало в ${lessonBells[0]}`,
-          icon: "/icons/apple-touch-icon.png",
           tag: uniqueId
         });
       }
     }
   });
 }
-
 setInterval(checkUpcomingLessons, 60000);
 setTimeout(checkUpcomingLessons, 5000);
 
-// --- ЗАГРУЗКА ДАННЫХ И УВЕДОМЛЕНИЯ О НОВОМ ДНЕ ---
 fetch('schedule.json', {cache:'no-cache'})
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(j => {
@@ -474,11 +322,9 @@ fetch('schedule.json', {cache:'no-cache'})
         document.getElementById('upd').innerHTML = '<br><span style="font-size:12px;opacity:0.7;">Обновлено: ' + new Date(j.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) + '</span>';
     }
 
-    // Уведомление о новом дне
     if (dates.length > 0) {
       const latestDate = dates[dates.length - 1];
       const lastSeenDate = localStorage.getItem('lastSeenScheduleDate');
-      
       if (!lastSeenDate) {
         localStorage.setItem('lastSeenScheduleDate', latestDate);
       } else if (lastSeenDate !== latestDate) {
@@ -486,19 +332,7 @@ fetch('schedule.json', {cache:'no-cache'})
         if (banner) {
           const [y, m, d] = latestDate.split('-').map(Number);
           const dateStr = new Date(y, m-1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-          
           banner.querySelector('span').textContent = `🎉 Появилось расписание на ${dateStr}!`;
           banner.style.display = 'flex';
         }
-        localStorage.setItem('lastSeenScheduleDate', latestDate);
-      }
-    }
-
-    let g = null; try { g = decodeURIComponent(location.hash.slice(1)); } catch(e){}
-    if (!g || !data.groups.includes(g)) g = store.get('group');
-    if (g && data.groups.includes(g)) pickGroup(g); else show();
-  })
-  .catch(() => app.replaceChildren(el('div','empty','Не удалось загрузить расписание. Обновите страницу позже.')));
-</script>
-</body>
-</html>
+        localStorage.setItem('lastSe
