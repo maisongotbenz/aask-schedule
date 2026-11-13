@@ -59,6 +59,7 @@ button { font: inherit; cursor: pointer; color: inherit; border: none; backgroun
 .subject { font-weight: 600; font-size: 17px; margin-bottom: 6px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--mute); font-size: 14px; }
 
+/* Стили для времени звонка */
 .time { font-size: 13px; color: var(--steel); font-weight: 700; margin-bottom: 4px; }
 
 .room { padding: 4px 10px; border-radius: 8px; background: var(--line); font-weight: 600; font-size: 13px; }
@@ -125,11 +126,14 @@ function pickGroup(g) {
   show();
 }
 
+// Функция для создания карточки с звонками
 function createLessonCard(lesson, weekday) {
   const c = el('div', 'lesson');
   c.appendChild(el('div', 'num', lesson.n));
   
   const b = el('div');
+  
+  // Добавляем время звонка, если оно есть
   const bl = bellsFor(weekday)[lesson.n];
   if (bl) {
     const time = el('div', 'time', bl[0] + '–' + bl[1]);
@@ -199,6 +203,7 @@ function show() {
         `;
         app.appendChild(emptyBlock);
     } else {
+        // ВОТ ЗДЕСЬ ВЫЗЫВАЕТСЯ ФУНКЦИЯ С ЗВОНКАМИ
         ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
     }
     
@@ -213,6 +218,7 @@ function show() {
           emptyBlock.innerHTML = `<div style="font-size: 30px; margin-bottom: 5px;">😴</div><div style="font-weight: 700;">Пар нет</div>`;
           app.appendChild(emptyBlock);
       } else {
+          // И ЗДЕСЬ ТОЖЕ
           ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
       }
     });
