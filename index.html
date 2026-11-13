@@ -125,13 +125,11 @@ function pickGroup(g) {
   show();
 }
 
-// Функция для создания карточки пары с звонками
 function createLessonCard(lesson, weekday) {
   const c = el('div', 'lesson');
   c.appendChild(el('div', 'num', lesson.n));
   
   const b = el('div');
-  // Добавляем время звонка
   const bl = bellsFor(weekday)[lesson.n];
   if (bl) {
     const time = el('div', 'time', bl[0] + '–' + bl[1]);
@@ -192,16 +190,31 @@ function show() {
     nav.append(p, n); head.appendChild(nav); app.appendChild(head);
     
     const ls = data.days[key].groups[group] || [];
-    if (!ls.length) app.appendChild(el('div', 'empty', 'Занятий нет.'));
-    ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
+    if (!ls.length) {
+        const emptyBlock = el('div', 'empty');
+        emptyBlock.innerHTML = `
+            <div style="font-size: 40px; margin-bottom: 10px;">😴</div>
+            <div style="font-weight: 700; font-size: 18px; margin-bottom: 6px;">Пар нет</div>
+            <div style="font-size: 14px; color: var(--mute);">На этот день расписание еще не выложили, либо занятий не предусмотрено.</div>
+        `;
+        app.appendChild(emptyBlock);
+    } else {
+        ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
+    }
     
   } else if (mode === 'week') {
     const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
     let list = dates.filter(k => k >= iso(mon) && k <= iso(sun)); if (!list.length) list = dates.slice(-7);
     list.forEach(k => { const d = data.days[k];
       app.appendChild(el('h2', null, cap(d.weekday) + ', ' + fmt(k))).style.cssText = 'margin: 20px 0 10px; font-size: 18px;';
-      const ls = data.days[k].groups[group] || []; if (!ls.length) app.appendChild(el('div', 'empty', 'Занятий нет.'));
-      ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
+      const ls = data.days[k].groups[group] || []; 
+      if (!ls.length) {
+          const emptyBlock = el('div', 'empty');
+          emptyBlock.innerHTML = `<div style="font-size: 30px; margin-bottom: 5px;">😴</div><div style="font-weight: 700;">Пар нет</div>`;
+          app.appendChild(emptyBlock);
+      } else {
+          ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
+      }
     });
     
   } else if (mode === 'news') {
