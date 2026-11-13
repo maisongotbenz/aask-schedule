@@ -59,13 +59,27 @@ button { font: inherit; cursor: pointer; color: inherit; border: none; backgroun
 .subject { font-weight: 600; font-size: 17px; margin-bottom: 6px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--mute); font-size: 14px; }
 
-/* Стили для времени звонка */
 .time { font-size: 13px; color: var(--steel); font-weight: 700; margin-bottom: 4px; }
 
 .room { padding: 4px 10px; border-radius: 8px; background: var(--line); font-weight: 600; font-size: 13px; }
 .tag { padding: 4px 10px; border-radius: 8px; background: rgba(0, 113, 227, 0.1); color: var(--steel); font-weight: 600; font-size: 13px; }
 
 .note, .empty { padding: 20px; border-radius: var(--radius); background: var(--card); color: var(--mute); text-align: center; font-weight: 500; margin-bottom: 16px; }
+
+/* Стили для карточки Telegram */
+.tg-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px; margin-bottom: 16px;
+  background: #2AABEE; color: #ffffff;
+  border-radius: var(--radius); text-decoration: none;
+  box-shadow: 0 4px 16px rgba(42, 171, 238, 0.3);
+  transition: transform 0.2s;
+}
+.tg-card:hover { transform: translateY(-2px); }
+.tg-icon { width: 32px; height: 32px; fill: #fff; }
+.tg-text { display: flex; flex-direction: column; line-height: 1.3; }
+.tg-title { font-weight: 700; font-size: 16px; }
+.tg-desc { font-size: 13px; opacity: 0.9; }
 
 .top-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20; }
 .icon-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 20px; border: 1px solid var(--line); }
@@ -126,14 +140,11 @@ function pickGroup(g) {
   show();
 }
 
-// Функция для создания карточки с звонками
 function createLessonCard(lesson, weekday) {
   const c = el('div', 'lesson');
   c.appendChild(el('div', 'num', lesson.n));
   
   const b = el('div');
-  
-  // Добавляем время звонка, если оно есть
   const bl = bellsFor(weekday)[lesson.n];
   if (bl) {
     const time = el('div', 'time', bl[0] + '–' + bl[1]);
@@ -203,7 +214,6 @@ function show() {
         `;
         app.appendChild(emptyBlock);
     } else {
-        // ВОТ ЗДЕСЬ ВЫЗЫВАЕТСЯ ФУНКЦИЯ С ЗВОНКАМИ
         ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
     }
     
@@ -218,12 +228,26 @@ function show() {
           emptyBlock.innerHTML = `<div style="font-size: 30px; margin-bottom: 5px;">😴</div><div style="font-weight: 700;">Пар нет</div>`;
           app.appendChild(emptyBlock);
       } else {
-          // И ЗДЕСЬ ТОЖЕ
           ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
       }
     });
     
   } else if (mode === 'news') {
+    // --- КАРТОЧКА TELEGRAM КАНАЛА ---
+    const tgCard = document.createElement('a');
+    tgCard.href = 'https://t.me/aask_shedule';
+    tgCard.target = '_blank';
+    tgCard.className = 'tg-card';
+    tgCard.innerHTML = `
+      <svg class="tg-icon" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      <div class="tg-text">
+        <span class="tg-title">Наш Telegram-канал</span>
+        <span class="tg-desc">Новости сайта и обновления расписания</span>
+      </div>
+    `;
+    app.appendChild(tgCard);
+
+    // --- БЛОК ПОДДЕРЖКИ ---
     const quotes = [
       "У тебя всё получится! Главное — не сдаваться. 💪",
       "Знания — это сила. Хорошей учёбы! 📚",
@@ -251,6 +275,7 @@ function show() {
     quoteCard.appendChild(quoteContent);
     app.appendChild(quoteCard);
 
+    // --- ЛЕНТА НОВОСТЕЙ ---
     if (!data.news || !data.news.length) {
       app.appendChild(el('div', 'empty', 'Пока новостей нет.'));
     } else {
