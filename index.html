@@ -194,13 +194,15 @@ button:active { transform: scale(0.97); }
   box-shadow: var(--shadow); margin-bottom: 16px;
 }
 
-/* --- ПЕРЕКЛЮЧАТЕЛЬ ТЕМ --- */
-.theme-toggle {
+/* --- КНОПКИ В УГЛУ --- */
+.top-controls {
   position: absolute; top: 20px; right: 20px;
+  display: flex; gap: 10px; z-index: 20;
+}
+.icon-btn {
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--card); box-shadow: var(--shadow);
   display: grid; place-items: center; font-size: 20px;
-  z-index: 20;
 }
 
 /* --- ПОДВАЛ --- */
@@ -218,7 +220,10 @@ footer a:hover { text-decoration: underline; }
 </head>
 <body>
 
-<button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">🌙</button>
+<div class="top-controls">
+  <button class="icon-btn" id="notifyToggle" style="display: none;" title="Включить напоминания">🔔</button>
+  <button class="icon-btn" id="themeToggle" aria-label="Переключить тему">🌙</button>
+</div>
 
 <main>
   <!-- Блок для уведомления -->
@@ -257,6 +262,36 @@ themeToggle.addEventListener('click', () => {
   themeToggle.textContent = isDark ? '🌙' : '☀️';
 });
 
+// --- ЛОГИКА НАПОМИНАНИЙ ---
+const notifyToggle = document.getElementById('notifyToggle');
+if ("Notification" in window) {
+  notifyToggle.style.display = 'grid';
+  if (Notification.permission === 'granted') {
+    notifyToggle.textContent = '🔔';
+  } else if (Notification.permission === 'denied') {
+    notifyToggle.textContent = '🔕';
+    notifyToggle.style.opacity = '0.5';
+  }
+}
+
+notifyToggle.addEventListener('click', () => {
+  if (Notification.permission !== 'granted') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        notifyToggle.textContent = '🔔';
+        notifyToggle.style.opacity = '1';
+        new Notification("Уведомления включены!", {
+          body: "Теперь мы напомним вам о начале пары за 5 минут.",
+          icon: "/icons/apple-touch-icon.png"
+        });
+      } else {
+        notifyToggle.textContent = '🔕';
+        notifyToggle.style.opacity = '0.5';
+      }
+    });
+  }
+});
+
 // --- ЗВОНКИ ---
 const BELLS = {
   mon: {1:['8:45','10:15'],2:['10:25','12:05'],3:['12:50','14:20'],4:['14:40','16:10'],5:['16:15','17:45']},
@@ -283,6 +318,7 @@ const ICONS = {
 // --- ОСНОВНАЯ ЛОГИКА ---
 const app = document.getElementById('app');
 let data, group = null, mode = 'day', dates = [], idx = 0;
+let notifiedLessons = new Set();
 
 function pickGroup(g){
   group = g; store.set('group', g);
@@ -386,7 +422,48 @@ function schedule(){
 }
 const show = () => group ? schedule() : picker();
 
-// --- ЗАГРУЗКА ДАННЫХ И УВЕДОМЛЕНИЯ ---
+// --- ПРОВЕРКА НАПОМИНАНИЙ ---
+function checkUpcomingLessons() {
+  if (Notification.permission !== 'granted' || !group || !data || mode !== 'day') return;
+  
+  const todayStr = iso(new Date());
+  if (!data.days[todayStr] || !data.days[todayStr].groups[group]) return;
+  
+  const todayLessons = data.days[todayStr].groups[group];
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  const bells = bellsFor(data.days[todayStr].weekday);
+  
+  todayLessons.forEach(lesson => {
+    const lessonBells = bells[lesson.n];
+    if (!lessonBells) return;
+    
+    const [startH, startM] = lessonBells[0].split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const diff = startMinutes - currentMinutes;
+    
+    // Напоминаем, если до пары осталось от 1 до 5 минут
+    if (diff > 0 && diff <= 5) {
+      const uniqueId = `${todayStr}_${lesson.n}`;
+      
+      if (!notifiedLessons.has(uniqueId)) {
+        notifiedLessons.add(uniqueId);
+        
+        new Notification(`Скоро ${lesson.n}-я пара!`, {
+          body: `${lesson.s}\nАудитория: ${lesson.r || 'не указана'}\nНачало в ${lessonBells[0]}`,
+          icon: "/icons/apple-touch-icon.png",
+          tag: uniqueId
+        });
+      }
+    }
+  });
+}
+
+setInterval(checkUpcomingLessons, 60000);
+setTimeout(checkUpcomingLessons, 5000);
+
+// --- ЗАГРУЗКА ДАННЫХ И УВЕДОМЛЕНИЯ О НОВОМ ДНЕ ---
 fetch('schedule.json', {cache:'no-cache'})
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(j => {
@@ -397,16 +474,14 @@ fetch('schedule.json', {cache:'no-cache'})
         document.getElementById('upd').innerHTML = '<br><span style="font-size:12px;opacity:0.7;">Обновлено: ' + new Date(j.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) + '</span>';
     }
 
-    // --- ЛОГИКА УВЕДОМЛЕНИЙ О НОВОМ ДНЕ ---
+    // Уведомление о новом дне
     if (dates.length > 0) {
-      const latestDate = dates[dates.length - 1]; // Самый новый день
+      const latestDate = dates[dates.length - 1];
       const lastSeenDate = localStorage.getItem('lastSeenScheduleDate');
       
       if (!lastSeenDate) {
-        // Первый заход, просто запоминаем
         localStorage.setItem('lastSeenScheduleDate', latestDate);
       } else if (lastSeenDate !== latestDate) {
-        // Появился новый день!
         const banner = document.getElementById('notification-banner');
         if (banner) {
           const [y, m, d] = latestDate.split('-').map(Number);
@@ -415,11 +490,9 @@ fetch('schedule.json', {cache:'no-cache'})
           banner.querySelector('span').textContent = `🎉 Появилось расписание на ${dateStr}!`;
           banner.style.display = 'flex';
         }
-        // Запоминаем новую дату
         localStorage.setItem('lastSeenScheduleDate', latestDate);
       }
     }
-    // ----------------------------------------
 
     let g = null; try { g = decodeURIComponent(location.hash.slice(1)); } catch(e){}
     if (!g || !data.groups.includes(g)) g = store.get('group');
