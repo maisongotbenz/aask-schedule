@@ -81,22 +81,31 @@ def parse_dataframe(df, date_key):
                         subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
                         t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
                         
-                        # Очищаем от пробелов и переносов
                         subj = " ".join(subj.split())
                         t_info = " ".join(t_info.split())
 
-                        # --- ЖЕСТКАЯ ЛОГИКА ДЛЯ ПОНЕДЕЛЬНИКА ---
-                        if is_monday and t_info:
-                            # Если в ячейке преподавателя есть текст (например, "Волкова О.В. 321"),
-                            # и это похоже на ФИО (есть точки или просто текст без цифр в начале),
-                            # то мы принудительно ставим предмет "Разговоры о важном".
-                            # Мы не смотрим на subj, потому что там может быть пустота или мусор.
+                        # --- УМНАЯ ЛОГИКА ДЛЯ ПОНЕДЕЛЬНИКА ---
+                        if is_monday:
+                            # Проверяем, является ли subj названием предмета.
+                            # Если subj пустой ИЛИ в subj только цифры ИЛИ subj совпадает с t_info (что странно),
+                            # то это, скорее всего, "пустая" ячейка.
+                            # Также, если subj содержит только фамилию (одно слово с точками), то это не предмет.
                             
-                            # Проверяем, что в t_info нет длинного текста (названия предмета)
-                            # Обычно ФИО короче 30 символов.
-                            if len(t_info) < 40: 
+                            is_empty_or_teacher = False
+                            
+                            # 1. Если пусто
+                            if not subj:
+                                is_empty_or_teacher = True
+                            # 2. Если в subj только фамилия с инициалами (например, "Иванов И.И.") или просто текст без пробелов
+                            elif re.match(r'^[А-Яа-я]+\s+[А-Яа-я]\.[А-Яа-я]\.$', subj) or len(subj.split()) == 1:
+                                is_empty_or_teacher = True
+                            # 3. Если subj совпадает с t_info (это значит, что мы случайно скопировали преподавателя)
+                            elif subj == t_info:
+                                is_empty_or_teacher = True
+                                
+                            if is_empty_or_teacher:
                                 subj = "Разговоры о важном"
-                        # ----------------------------------------
+                        # -----------------------------------------
 
                         if subj or t_info:
                             t = t_info
@@ -157,7 +166,6 @@ def main():
                 new_data_found = True
                 print(f"  -> Успешно добавлен/обновлен день {date_key} (групп: {len(day_data['groups'])})")
                 
-                # Добавляем новость только если это новый день (которого не было)
                 if date_key not in old_data.get('days', {}):
                     date_obj = datetime.strptime(date_key, '%Y-%m-%d')
                     news.insert(0, {
