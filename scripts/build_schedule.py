@@ -56,8 +56,6 @@ def parse_dataframe(df, date_key):
         for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
             if d in title.lower(): weekday = d; break
         
-        is_monday = (weekday == 'понедельник')
-        
         groups = {}
         block_starts = [r for r in range(len(df)) if str(df.iloc[r, 0]).strip() == "№ пары"]
         
@@ -84,15 +82,7 @@ def parse_dataframe(df, date_key):
                         subj = " ".join(subj.split())
                         t_info = " ".join(t_info.split())
 
-                        # --- ЛОГИКА: ТОЛЬКО 1-Я ПАРА В ПОНЕДЕЛЬНИК ---
-                        if is_monday and num == 1:
-                            # Принудительно ставим "Разговоры о важном" для 1-й пары
-                            subj = "Разговоры о важном"
-                            # Если преподаватель пустой, оставляем пустым
-                            if not t_info:
-                                t_info = ""
-                        # ---------------------------------------------
-
+                        # Никаких замен. Берем только то, что есть в таблице.
                         if subj or t_info:
                             t = t_info
                             rm = ""
