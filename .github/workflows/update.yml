@@ -76,8 +76,18 @@ jobs:
             echo "Расписание не изменилось."
           else
             git commit -m "Automatic schedule update"
-            # ВАЖНО: Подтягиваем изменения, чтобы избежать ошибки "rejected"
-            git pull --rebase origin main
+            
+            # Пытаемся подтянуть изменения с сервера (если кто-то редактировал файл)
+            # Если возникает конфликт, мы отменяем слияние, берем версию с сервера
+            # и принудительно записываем наш новый файл
+            git pull --rebase origin main || (
+              echo "Обнаружен конфликт! Принудительно перезаписываем файл..."
+              git rebase --abort
+              git reset --hard origin/main
+              git add schedule.json
+              git commit -m "Automatic schedule update (conflict resolved)"
+            )
+            
             git push
             echo "Новое расписание опубликовано в GitHub."
           fi
