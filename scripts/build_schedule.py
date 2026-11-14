@@ -56,7 +56,6 @@ def parse_dataframe(df, date_key):
         for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
             if d in title.lower(): weekday = d; break
         
-        # Проверяем, понедельник ли это
         is_monday = (weekday == 'понедельник')
         
         groups = {}
@@ -82,13 +81,22 @@ def parse_dataframe(df, date_key):
                         subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
                         t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
                         
-                        # --- ЛОГИКА ДЛЯ "РАЗГОВОРОВ О ВАЖНОМ" ---
-                        # Если день - понедельник, и предмет пустой, но есть текст в ячейке преподавателя
-                        if is_monday and not subj and t_info:
-                            # Принудительно ставим название
-                            subj = "Разговоры о важном"
-                            # t_info оставляем как есть (там фамилия преподавателя)
-                        # -----------------------------------------
+                        # Очищаем от пробелов и переносов
+                        subj = " ".join(subj.split())
+                        t_info = " ".join(t_info.split())
+
+                        # --- ЖЕСТКАЯ ЛОГИКА ДЛЯ ПОНЕДЕЛЬНИКА ---
+                        if is_monday and t_info:
+                            # Если в ячейке преподавателя есть текст (например, "Волкова О.В. 321"),
+                            # и это похоже на ФИО (есть точки или просто текст без цифр в начале),
+                            # то мы принудительно ставим предмет "Разговоры о важном".
+                            # Мы не смотрим на subj, потому что там может быть пустота или мусор.
+                            
+                            # Проверяем, что в t_info нет длинного текста (названия предмета)
+                            # Обычно ФИО короче 30 символов.
+                            if len(t_info) < 40: 
+                                subj = "Разговоры о важном"
+                        # ----------------------------------------
 
                         if subj or t_info:
                             t = t_info
@@ -96,13 +104,11 @@ def parse_dataframe(df, date_key):
                             p = None
                             if "(п/п)" in t or "подгруппа" in t.lower(): p = 1
                             
-                            # Ищем аудиторию (число в конце)
                             room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
                             if room_match:
                                 rm = room_match.group(1)
                                 t = t.replace(room_match.group(0), '').strip()
                             
-                            # Очищаем от подгрупп
                             t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
                             
                             item = {"n": num, "s": subj, "t": t, "r": rm}
@@ -140,13 +146,6 @@ def main():
         date_str = target.strftime("%d%m")
         date_key = target.strftime("%Y-%m-%d")
         
-        # ВАЖНО: Если мы хотим обновить существующие дни (из-за новой логики с Разговорами),
-        # нужно удалить эту проверку. Но чтобы не перекачивать всё каждый раз, 
-        # мы проверим, есть ли уже "Разговоры о важном" в этом дне.
-        # Для простоты, давайте просто перекачивать всё заново при каждом запуске (это быстро).
-        # if date_key in all_days:
-        #     continue
-
         print(f"\n--- Пробуем {date_str} ({date_key}) ---")
         df = download_and_parse(date_str)
         
@@ -156,20 +155,22 @@ def main():
                 all_days[date_key] = day_data
                 all_groups.update(day_data['groups'].keys())
                 new_data_found = True
-                print(f"  -> Успешно добавлен новый день {date_key} (групп: {len(day_data['groups'])})")
+                print(f"  -> Успешно добавлен/обновлен день {date_key} (групп: {len(day_data['groups'])})")
                 
-                date_obj = datetime.strptime(date_key, '%Y-%m-%d')
-                news.insert(0, {
-                    "date": datetime.now().strftime('%Y-%m-%d'),
-                    "text": f"Появилось расписание на {date_obj.strftime('%d.%m')} ({day_data['weekday']})."
-                })
+                # Добавляем новость только если это новый день (которого не было)
+                if date_key not in old_data.get('days', {}):
+                    date_obj = datetime.strptime(date_key, '%Y-%m-%d')
+                    news.insert(0, {
+                        "date": datetime.now().strftime('%Y-%m-%d'),
+                        "text": f"Появилось расписание на {date_obj.strftime('%d.%m')} ({day_data['weekday']})."
+                    })
 
     if not new_data_found:
         print("\n!!! Новых данных нет. Расписание не изменилось.")
         if not news:
             news.append({"date": datetime.now().strftime('%Y-%m-%d'), "text": "Добро пожаловать! Расписание загружено."})
     else:
-        print(f"\nНайдены новые дни! Обновляем schedule.json.")
+        print(f"\nОбновляем schedule.json.")
 
     news = news[:10]
     
