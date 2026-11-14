@@ -56,6 +56,9 @@ def parse_dataframe(df, date_key):
         for d in ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']:
             if d in title.lower(): weekday = d; break
         
+        # Проверяем, понедельник ли это
+        is_monday = (weekday == 'понедельник')
+        
         groups = {}
         block_starts = [r for r in range(len(df)) if str(df.iloc[r, 0]).strip() == "№ пары"]
         
@@ -79,17 +82,14 @@ def parse_dataframe(df, date_key):
                         subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
                         t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
                         
-                        # --- ИСПРАВЛЕНИЕ: Если название предмета пустое, но есть текст в ячейке преподавателя ---
-                        # Это часто бывает с "Разговорами о важном" или когда предмет объединен с другой строкой
-                        if not subj and t_info:
-                            # Проверяем, похоже ли это на ФИО с аудиторией (например, "Иванов И.И. 101")
-                            # Если в тексте есть точки (инициалы) и цифры (аудитория), то это, скорее всего, преподаватель.
-                            # Если точек нет, то это может быть название предмета (например, "Волкова О.В. 321" - тут точки есть, но парсер ошибся)
-                            # В нашем случае, если t_info не содержит инициалов с точками, то это предмет.
-                            if not re.search(r'[А-Яа-я]\.[А-Яа-я]\.', t_info):
-                                subj = t_info
-                                t_info = "" # Очищаем преподавателя, так как это был предмет
-                        # ---------------------------------------------------------------------------------------
+                        # --- ЛОГИКА ДЛЯ "РАЗГОВОРОВ О ВАЖНОМ" ---
+                        # Если день - понедельник, и предмет пустой, но есть текст в ячейке преподавателя
+                        if is_monday and not subj and t_info:
+                            # Если в ячейке преподавателя есть текст (например, "Волкова О.В. 321"), 
+                            # мы делаем его названием предмета.
+                            subj = t_info
+                            t_info = "" # Очищаем, так как это было название
+                        # -----------------------------------------
 
                         if subj or t_info:
                             t = t_info
@@ -122,7 +122,6 @@ def parse_dataframe(df, date_key):
         return None
 
 def main():
-    # Читаем старый файл, чтобы сохранить новости, если новых данных нет
     old_data = {}
     if os.path.exists('schedule.json'):
         try:
@@ -137,12 +136,11 @@ def main():
     now = datetime.now()
     new_data_found = False
 
-    for i in range(5):
+    for i in range(7):
         target = now + timedelta(days=i)
         date_str = target.strftime("%d%m")
         date_key = target.strftime("%Y-%m-%d")
         
-        # Если этот день уже есть в старом файле, пропускаем (чтобы не перекачивать)
         if date_key in all_days:
             continue
 
@@ -157,7 +155,6 @@ def main():
                 new_data_found = True
                 print(f"  -> Успешно добавлен новый день {date_key} (групп: {len(day_data['groups'])})")
                 
-                # Добавляем новость
                 date_obj = datetime.strptime(date_key, '%Y-%m-%d')
                 news.insert(0, {
                     "date": datetime.now().strftime('%Y-%m-%d'),
