@@ -19,7 +19,6 @@ def download_and_parse(date_str):
         
         print(f"Файл скачан, размер: {len(r.content)} байт")
         
-        # 1. Пытаемся прочитать как Excel (бинарный формат)
         try:
             df = pd.read_excel(BytesIO(r.content), header=None)
             print("Excel успешно прочитан.")
@@ -27,7 +26,6 @@ def download_and_parse(date_str):
         except Exception as e:
             print(f"Не удалось прочитать как Excel: {e}")
         
-        # 2. Если не вышло - пробуем как HTML (перебираем кодировки)
         for enc in ['utf-8', 'cp1251', 'latin1', 'windows-1251']:
             try:
                 html_content = r.content.decode(enc, errors='ignore')
@@ -81,15 +79,31 @@ def parse_dataframe(df, date_key):
                         subj = str(df.iloc[r, c]).strip() if not pd.isna(df.iloc[r, c]) else ""
                         t_info = str(df.iloc[r+1, c]).strip() if not pd.isna(df.iloc[r+1, c]) else ""
                         
+                        # --- ИСПРАВЛЕНИЕ: Если название предмета пустое, но есть текст в ячейке преподавателя ---
+                        # Это часто бывает с "Разговорами о важном" или когда предмет объединен с другой строкой
+                        if not subj and t_info:
+                            # Проверяем, похоже ли это на ФИО с аудиторией (например, "Иванов И.И. 101")
+                            # Если в тексте есть точки (инициалы) и цифры (аудитория), то это, скорее всего, преподаватель.
+                            # Если точек нет, то это может быть название предмета (например, "Волкова О.В. 321" - тут точки есть, но парсер ошибся)
+                            # В нашем случае, если t_info не содержит инициалов с точками, то это предмет.
+                            if not re.search(r'[А-Яа-я]\.[А-Яа-я]\.', t_info):
+                                subj = t_info
+                                t_info = "" # Очищаем преподавателя, так как это был предмет
+                        # ---------------------------------------------------------------------------------------
+
                         if subj or t_info:
                             t = t_info
                             rm = ""
                             p = None
                             if "(п/п)" in t or "подгруппа" in t.lower(): p = 1
+                            
+                            # Ищем аудиторию (число в конце)
                             room_match = re.search(r'(\d+[а-яА-Я]?)\s*(?:\(|$)', t)
                             if room_match:
                                 rm = room_match.group(1)
                                 t = t.replace(room_match.group(0), '').strip()
+                            
+                            # Очищаем от подгрупп
                             t = t.replace('(п/п)', '').replace('(подгруппа)', '').strip()
                             
                             item = {"n": num, "s": subj, "t": t, "r": rm}
@@ -108,15 +122,30 @@ def parse_dataframe(df, date_key):
         return None
 
 def main():
-    all_days = {}
-    all_groups = set()
+    # Читаем старый файл, чтобы сохранить новости, если новых данных нет
+    old_data = {}
+    if os.path.exists('schedule.json'):
+        try:
+            with open('schedule.json', 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+        except: pass
+
+    all_days = old_data.get('days', {}) 
+    all_groups = set(old_data.get('groups', []))
+    news = old_data.get('news', [])
     
     now = datetime.now()
+    new_data_found = False
+
     for i in range(5):
         target = now + timedelta(days=i)
         date_str = target.strftime("%d%m")
         date_key = target.strftime("%Y-%m-%d")
         
+        # Если этот день уже есть в старом файле, пропускаем (чтобы не перекачивать)
+        if date_key in all_days:
+            continue
+
         print(f"\n--- Пробуем {date_str} ({date_key}) ---")
         df = download_and_parse(date_str)
         
@@ -125,52 +154,35 @@ def main():
             if day_data and day_data['groups']:
                 all_days[date_key] = day_data
                 all_groups.update(day_data['groups'].keys())
-                print(f"  -> Успешно добавлен день {date_key} (групп: {len(day_data['groups'])})")
+                new_data_found = True
+                print(f"  -> Успешно добавлен новый день {date_key} (групп: {len(day_data['groups'])})")
+                
+                # Добавляем новость
+                date_obj = datetime.strptime(date_key, '%Y-%m-%d')
+                news.insert(0, {
+                    "date": datetime.now().strftime('%Y-%m-%d'),
+                    "text": f"Появилось расписание на {date_obj.strftime('%d.%m')} ({day_data['weekday']})."
+                })
 
-    if not all_days:
-        print("\n!!! Нет данных для сохранения.")
-        return
+    if not new_data_found:
+        print("\n!!! Новых данных нет. Расписание не изменилось.")
+        if not news:
+            news.append({"date": datetime.now().strftime('%Y-%m-%d'), "text": "Добро пожаловать! Расписание загружено."})
+    else:
+        print(f"\nНайдены новые дни! Обновляем schedule.json.")
 
-    # --- ГЕНЕРАЦИЯ НОВОСТЕЙ ---
-    news = []
-    old_data = {}
-    if os.path.exists('schedule.json'):
-        try:
-            with open('schedule.json', 'r', encoding='utf-8') as f:
-                old_data = json.load(f)
-        except: pass
-
-    old_days = set(old_data.get('days', {}).keys())
-    new_days = set(all_days.keys())
+    news = news[:10]
     
-    added_days = new_days - old_days
-    for day_key in sorted(added_days):
-        day_info = all_days[day_key]
-        date_obj = datetime.strptime(day_key, '%Y-%m-%d')
-        date_str = date_obj.strftime('%d.%m')
-        news.append({
-            "date": datetime.now().strftime('%Y-%m-%d'),
-            "text": f"Появилось расписание на {date_str} ({day_info['weekday']})."
-        })
-    
-    if not old_data:
-        news.append({"date": datetime.now().strftime('%Y-%m-%d'), "text": "Добро пожаловать! Расписание успешно загружено."})
-
-    old_news = old_data.get('news', [])
-    all_news = news + old_news
-    all_news = all_news[:10] # Оставляем только 10 последних новостей
-    
-    # --- ФОРМИРУЕМ ИТОГОВЫЙ JSON ---
     res = {
         "updated": datetime.now().astimezone().isoformat(timespec='minutes'),
         "groups": sorted(list(all_groups)),
         "days": all_days,
-        "news": all_news
+        "news": news
     }
     
     with open('schedule.json', 'w', encoding='utf-8') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
-    print(f"\nГотово! Сохранено дней: {len(all_days)}. Новостей: {len(all_news)}")
+    print(f"Готово! В файле дней: {len(all_days)}")
 
 if __name__ == "__main__":
     main()
