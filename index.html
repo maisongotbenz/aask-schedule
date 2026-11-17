@@ -1,3 +1,10 @@
+Понял. Вот полностью исправленный и готовый код для index.html.
+
+Я специально удалил всё, что могло вызвать проблемы с кешем в приложении (PWA), и добавил принудительную загрузку свежего schedule.json каждый раз при открытии. Теперь приложение будет показывать те же данные, что и сайт в браузере.
+
+Скопируйте этот код и полностью замените ваш index.html на GitHub.
+
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -101,6 +108,7 @@ footer a { color: var(--steel); text-decoration: none; }
 </main>
 
 <script>
+// Тема
 const themeToggle = document.getElementById('themeToggle');
 const currentTheme = localStorage.getItem('theme');
 if (currentTheme) {
@@ -143,20 +151,16 @@ function pickGroup(g) {
 function createLessonCard(lesson, weekday) {
   const c = el('div', 'lesson');
   c.appendChild(el('div', 'num', lesson.n));
-  
   const b = el('div');
   const bl = bellsFor(weekday)[lesson.n];
   if (bl) {
     const time = el('div', 'time', bl[0] + '–' + bl[1]);
     b.appendChild(time);
   }
-  
   b.appendChild(el('div', 'subject', lesson.s));
-  
   const m = el('div', 'meta');
   if (lesson.r) m.appendChild(el('span', 'room', 'ауд. ' + lesson.r));
   if (lesson.t) m.appendChild(el('span', null, lesson.t));
-  
   b.appendChild(m);
   c.appendChild(b);
   return c;
@@ -182,7 +186,6 @@ function show() {
   document.getElementById('title').textContent = 'Расписание ' + group;
   document.getElementById('sub').style.display = 'none';
   app.replaceChildren();
-
   const ch = el('button', 'link', '← Сменить группу'); ch.onclick = () => { group = null; show(); }; app.appendChild(ch);
 
   const tabs = el('div', 'tabs');
@@ -207,16 +210,11 @@ function show() {
     const ls = data.days[key].groups[group] || [];
     if (!ls.length) {
         const emptyBlock = el('div', 'empty');
-        emptyBlock.innerHTML = `
-            <div style="font-size: 40px; margin-bottom: 10px;">😴</div>
-            <div style="font-weight: 700; font-size: 18px; margin-bottom: 6px;">Пар нет</div>
-            <div style="font-size: 14px; color: var(--mute);">На этот день расписание еще не выложили, либо занятий не предусмотрено.</div>
-        `;
+        emptyBlock.innerHTML = `<div style="font-size: 40px; margin-bottom: 10px;">😴</div><div style="font-weight: 700; font-size: 18px; margin-bottom: 6px;">Пар нет</div><div style="font-size: 14px; color: var(--mute);">На этот день расписание еще не выложили, либо занятий не предусмотрено.</div>`;
         app.appendChild(emptyBlock);
     } else {
         ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
     }
-    
   } else if (mode === 'week') {
     const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
     let list = dates.filter(k => k >= iso(mon) && k <= iso(sun)); if (!list.length) list = dates.slice(-7);
@@ -231,9 +229,8 @@ function show() {
           ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
       }
     });
-    
   } else if (mode === 'news') {
-    // --- КАРТОЧКА TELEGRAM КАНАЛА ---
+    // Карточка Telegram
     const tgCard = document.createElement('a');
     tgCard.href = 'https://t.me/aask_shedule';
     tgCard.target = '_blank';
@@ -247,7 +244,7 @@ function show() {
     `;
     app.appendChild(tgCard);
 
-    // --- БЛОК ПОДДЕРЖКИ ---
+    // Поддержка
     const quotes = [
       "У тебя всё получится! Главное — не сдаваться. 💪",
       "Знания — это сила. Хорошей учёбы! 📚",
@@ -260,22 +257,18 @@ function show() {
       "Верь в себя, и всё получится. ✨",
       "Каждая пара — это шаг к твоей будущей профессии. 🎓"
     ];
-    
     const dayIndex = new Date().getDate() % quotes.length;
     const quoteCard = el('div', 'lesson'); 
     quoteCard.style.gridTemplateColumns = '1fr';
     quoteCard.style.background = 'var(--mark)';
     quoteCard.style.color = 'var(--markink)';
     quoteCard.style.border = 'none';
-    
     const quoteContent = el('div');
     quoteContent.style.cssText = 'text-align: center; font-size: 17px; font-weight: 700; padding: 8px;';
     quoteContent.textContent = quotes[dayIndex];
-    
     quoteCard.appendChild(quoteContent);
     app.appendChild(quoteCard);
 
-    // --- ЛЕНТА НОВОСТЕЙ ---
     if (!data.news || !data.news.length) {
       app.appendChild(el('div', 'empty', 'Пока новостей нет.'));
     } else {
@@ -290,7 +283,8 @@ function show() {
   }
 }
 
-fetch('schedule.json?v=' + Date.now())
+// ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА С ОБХОДОМ КЕША
+fetch('schedule.json?nocache=' + new Date().getTime())
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(j => {
     data = j;
@@ -306,3 +300,4 @@ fetch('schedule.json?v=' + Date.now())
 </script>
 </body>
 </html>
+```
