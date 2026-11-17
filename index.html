@@ -206,7 +206,6 @@ function showStats() {
   const att = getAttendance();
   let total = 0, attended = 0, missed = 0;
 
-  // Считаем по всем дням, которые есть в data
   if (data && data.days) {
     Object.keys(data.days).forEach(dateKey => {
       const day = data.days[dateKey];
@@ -225,6 +224,12 @@ function showStats() {
 
   app.replaceChildren();
   
+  // Кнопка назад
+  const backBtn = el('button', 'link', '← Назад к расписанию');
+  backBtn.style.marginBottom = '16px';
+  backBtn.onclick = () => { mode = 'day'; show(); };
+  app.appendChild(backBtn);
+
   const grid = el('div', 'stats-grid');
   
   const c1 = el('div', 'stat-card');
@@ -248,7 +253,6 @@ function showStats() {
   `;
   app.appendChild(progCard);
 
-  // Кнопка сброса
   const resetBtn = el('button', 'link', 'Сбросить всю статистику');
   resetBtn.style.color = 'var(--red)';
   resetBtn.style.marginTop = '20px';
