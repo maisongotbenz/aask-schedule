@@ -77,16 +77,17 @@ jobs:
           else
             git commit -m "Automatic schedule update"
             
-            # Пытаемся подтянуть изменения с сервера (если кто-то редактировал файл)
-            # Если возникает конфликт, мы отменяем слияние, берем версию с сервера
-            # и принудительно записываем наш новый файл
-            git pull --rebase origin main || (
-              echo "Обнаружен конфликт! Принудительно перезаписываем файл..."
-              git rebase --abort
-              git reset --hard origin/main
-              git add schedule.json
-              git commit -m "Automatic schedule update (conflict resolved)"
-            )
+            # Пытаемся подтянуть изменения. Если конфликт — жестко перезаписываем
+            if ! git pull --rebase origin main; then
+                echo "Конфликт! Принудительно перезаписываем schedule.json нашей версией."
+                git rebase --abort
+                git fetch origin main
+                git reset --hard origin/main
+                # Восстанавливаем наш файл из коммита, который сделали выше
+                git checkout HEAD@{1} -- schedule.json 2>/dev/null || true
+                git add schedule.json
+                git commit -m "Automatic schedule update (conflict resolved)" || true
+            fi
             
             git push
             echo "Новое расписание опубликовано в GitHub."
