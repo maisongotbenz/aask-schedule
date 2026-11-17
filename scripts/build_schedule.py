@@ -112,25 +112,35 @@ def parse_dataframe(df, date_key):
 
 def main():
     old_data = {}
-    # Читаем старый файл из КОРНЯ
     if os.path.exists('schedule.json'):
         try:
             with open('schedule.json', 'r', encoding='utf-8') as f:
                 old_data = json.load(f)
         except: pass
 
-    all_days = old_data.get('days', {}) 
-    all_groups = set(old_data.get('groups', []))
+    old_days = old_data.get('days', {})
+    all_days = {}
+    all_groups = set()
     news = old_data.get('news', [])
     
     now = datetime.now()
+    # Начинаем за 5 дней до сегодня
+    start_date = now - timedelta(days=5)
     new_data_found = False
 
-    for i in range(7):
-        target = now + timedelta(days=i)
+    # Загружаем 5 прошлых дней + сегодня + 7 будущих = 13 дней
+    for i in range(13):
+        target = start_date + timedelta(days=i)
         date_str = target.strftime("%d%m")
         date_key = target.strftime("%Y-%m-%d")
         
+        # Если этот день уже есть в старом файле и это не сегодня, пропускаем
+        if date_key in old_days and date_key != now.strftime("%Y-%m-%d"):
+            all_days[date_key] = old_days[date_key]
+            if 'groups' in old_days[date_key]:
+                all_groups.update(old_days[date_key]['groups'].keys())
+            continue
+
         print(f"\n--- Пробуем {date_str} ({date_key}) ---")
         df = download_and_parse(date_str)
         
@@ -142,12 +152,23 @@ def main():
                 new_data_found = True
                 print(f"  -> Успешно добавлен/обновлен день {date_key} (групп: {len(day_data['groups'])})")
                 
-                if date_key not in old_data.get('days', {}):
-                    date_obj = datetime.strptime(date_key, '%Y-%m-%d')
+                # Логика новостей
+                date_obj = datetime.strptime(date_key, '%Y-%m-%d')
+                date_str_ru = date_obj.strftime('%d.%m')
+                
+                if date_key not in old_days:
                     news.insert(0, {
                         "date": datetime.now().strftime('%Y-%m-%d'),
-                        "text": f"Появилось расписание на {date_obj.strftime('%d.%m')} ({day_data['weekday']})."
+                        "text": f"Появилось расписание на {date_str_ru} ({day_data['weekday']})."
                     })
+                else:
+                    old_day_str = json.dumps(old_days[date_key], sort_keys=True)
+                    new_day_str = json.dumps(day_data, sort_keys=True)
+                    if old_day_str != new_day_str:
+                        news.insert(0, {
+                            "date": datetime.now().strftime('%Y-%m-%d'),
+                            "text": f"Обновилось расписание на {date_str_ru} ({day_data['weekday']}). Проверьте замены!"
+                        })
 
     if not new_data_found:
         print("\n!!! Новых данных нет. Расписание не изменилось.")
@@ -165,7 +186,6 @@ def main():
         "news": news
     }
     
-    # СОХРАНЯЕМ В КОРЕНЬ (без папки public)
     with open('schedule.json', 'w', encoding='utf-8') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
     print(f"Готово! Записано: schedule.json (в корне)")
