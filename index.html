@@ -18,6 +18,7 @@
   --bg: #f5f5f7; --card: #ffffff; --ink: #1d1d1f; --mute: #86868b;
   --line: #e5e5ea; --mark: #f2b705; --markink: #1d1d1f; --steel: #0071e3;
   --shadow: 0 4px 24px rgba(0,0,0,0.06); --radius: 16px;
+  --green: #34c759; --red: #ff3b30;
 }
 [data-theme="dark"] {
   --bg: #000000; --card: #1c1c1e; --ink: #f5f5f7; --mute: #86868b;
@@ -38,8 +39,8 @@ h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
 button { font: inherit; cursor: pointer; color: inherit; border: none; background: none; transition: all 0.2s; }
 .link { color: var(--steel); font-weight: 600; padding: 8px 0; display: inline-block; }
 
-.tabs { display: flex; gap: 4px; margin: 20px 0; padding: 4px; background: var(--line); border-radius: 12px; }
-.tabs button { flex: 1; padding: 10px; border-radius: 10px; color: var(--mute); font-weight: 600; font-size: 15px; }
+.tabs { display: flex; gap: 4px; margin: 20px 0; padding: 4px; background: var(--line); border-radius: 12px; overflow-x: auto; }
+.tabs button { flex: 1; padding: 10px; border-radius: 10px; color: var(--mute); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
 .search { width: 100%; margin: 16px 0 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; }
@@ -54,39 +55,35 @@ button { font: inherit; cursor: pointer; color: inherit; border: none; backgroun
 .nav button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); display: grid; place-items: center; font-size: 20px; }
 .nav button:disabled { opacity: 0.3; cursor: default; }
 
-.lesson { display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 16px; margin-bottom: 10px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--line); }
+/* Карточка пары */
+.lesson { display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; padding: 16px; margin-bottom: 10px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--line); transition: border-color 0.2s; }
+.lesson.attended { border-color: var(--green); background: rgba(52, 199, 89, 0.05); }
+.lesson.missed { border-color: var(--red); background: rgba(255, 59, 48, 0.05); }
+
 .num { display: grid; place-items: center; height: 56px; border-radius: 12px; background: var(--mark); color: var(--markink); font-size: 24px; font-weight: 800; }
 .subject { font-weight: 600; font-size: 17px; margin-bottom: 6px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--mute); font-size: 14px; }
-
 .time { font-size: 13px; color: var(--steel); font-weight: 700; margin-bottom: 4px; }
-
 .room { padding: 4px 10px; border-radius: 8px; background: var(--line); font-weight: 600; font-size: 13px; }
 .tag { padding: 4px 10px; border-radius: 8px; background: rgba(0, 113, 227, 0.1); color: var(--steel); font-weight: 600; font-size: 13px; }
 
+/* Кнопки отметок */
+.mark-buttons { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.mark-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; font-size: 16px; opacity: 0.6; }
+.mark-btn:hover { opacity: 1; transform: scale(1.05); }
+.mark-btn.active { opacity: 1; border-color: transparent; }
+.mark-btn.attended-btn.active { background: var(--green); color: #fff; }
+.mark-btn.missed-btn.active { background: var(--red); color: #fff; }
+
 .note, .empty { padding: 20px; border-radius: var(--radius); background: var(--card); color: var(--mute); text-align: center; font-weight: 500; margin-bottom: 16px; }
 
-/* Стили для звонков */
-.bell-card { display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 10px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--line); transition: all 0.2s; }
-.bell-card.active { border-color: var(--mark); background: rgba(242, 183, 5, 0.05); }
-.bell-num { font-size: 20px; font-weight: 800; width: 40px; text-align: center; color: var(--mark); }
-.bell-times { display: flex; flex-direction: column; font-weight: 600; font-size: 15px; }
-.bell-duration { font-size: 13px; color: var(--mute); font-weight: 400; margin-top: 2px; }
-.bell-status { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: var(--line); color: var(--mute); }
-
-.tg-card {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px; margin-bottom: 16px;
-  background: #2AABEE; color: #ffffff;
-  border-radius: var(--radius); text-decoration: none;
-  box-shadow: 0 4px 16px rgba(42, 171, 238, 0.3);
-  transition: transform 0.2s;
-}
-.tg-card:hover { transform: translateY(-2px); }
-.tg-icon { width: 32px; height: 32px; fill: #fff; }
-.tg-text { display: flex; flex-direction: column; line-height: 1.3; }
-.tg-title { font-weight: 700; font-size: 16px; }
-.tg-desc { font-size: 13px; opacity: 0.9; }
+/* Блок статистики */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stat-card { padding: 16px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--line); text-align: center; }
+.stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+.stat-label { font-size: 13px; color: var(--mute); }
+.progress-bar { width: 100%; height: 12px; background: var(--line); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 6px; transition: width 0.5s; }
 
 .top-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20; }
 .icon-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 20px; border: 1px solid var(--line); }
@@ -108,7 +105,7 @@ footer a { color: var(--steel); text-decoration: none; }
 </main>
 
 <script>
-// Тема
+// --- ТЕМА ---
 const themeToggle = document.getElementById('themeToggle');
 const currentTheme = localStorage.getItem('theme');
 if (currentTheme) {
@@ -126,6 +123,7 @@ themeToggle.addEventListener('click', () => {
   themeToggle.textContent = isDark ? '🌙' : '☀️';
 });
 
+// --- ЗВОНКИ ---
 const BELLS = {
   mon: {1:['8:45','10:15'],2:['10:25','12:05'],3:['12:50','14:20'],4:['14:40','16:10'],5:['16:15','17:45']},
   std: {1:['8:00','9:30'],2:['9:35','11:15'],3:['11:35','13:15'],4:['13:35','15:05'],5:['15:25','16:55'],6:['17:00','18:30']}
@@ -137,6 +135,24 @@ const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') 
 const fmt = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}); };
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
 
+// --- ХРАНИЛИЩЕ ОТМЕТОК ---
+const getAttendance = () => JSON.parse(localStorage.getItem('attendance') || '{}');
+const saveAttendance = (data) => localStorage.setItem('attendance', JSON.stringify(data));
+
+function toggleMark(dateKey, lessonNum, status) {
+  const att = getAttendance();
+  const id = `${dateKey}_${lessonNum}_${group}`;
+  
+  if (att[id] === status) {
+    delete att[id]; // Если нажали повторно - снимаем отметку
+  } else {
+    att[id] = status;
+  }
+  saveAttendance(att);
+  show(); // Перерисовываем страницу
+}
+
+// --- ОСНОВНАЯ ЛОГИКА ---
 const app = document.getElementById('app');
 let data, group = null, mode = 'news', dates = [], idx = 0;
 
@@ -148,22 +164,101 @@ function pickGroup(g) {
   show();
 }
 
-function createLessonCard(lesson, weekday) {
+function createLessonCard(lesson, weekday, dateKey) {
   const c = el('div', 'lesson');
+  
+  const att = getAttendance();
+  const id = `${dateKey}_${lesson.n}_${group}`;
+  const status = att[id];
+
+  if (status === 'attended') c.classList.add('attended');
+  if (status === 'missed') c.classList.add('missed');
+
   c.appendChild(el('div', 'num', lesson.n));
+  
   const b = el('div');
   const bl = bellsFor(weekday)[lesson.n];
   if (bl) {
-    const time = el('div', 'time', bl[0] + '–' + bl[1]);
-    b.appendChild(time);
+    b.appendChild(el('div', 'time', bl[0] + '–' + bl[1]));
   }
   b.appendChild(el('div', 'subject', lesson.s));
   const m = el('div', 'meta');
   if (lesson.r) m.appendChild(el('span', 'room', 'ауд. ' + lesson.r));
   if (lesson.t) m.appendChild(el('span', null, lesson.t));
   b.appendChild(m);
-  c.appendChild(b);
+
+  // Кнопки отметок
+  const btns = el('div', 'mark-buttons');
+  
+  const btnAttended = el('button', 'mark-btn attended-btn' + (status === 'attended' ? ' active' : ''), '✅');
+  btnAttended.onclick = (e) => { e.stopPropagation(); toggleMark(dateKey, lesson.n, 'attended'); };
+  
+  const btnMissed = el('button', 'mark-btn missed-btn' + (status === 'missed' ? ' active' : ''), '❌');
+  btnMissed.onclick = (e) => { e.stopPropagation(); toggleMark(dateKey, lesson.n, 'missed'); };
+
+  btns.append(btnAttended, btnMissed);
+  c.append(b, btns);
+  
   return c;
+}
+
+function showStats() {
+  const att = getAttendance();
+  let total = 0, attended = 0, missed = 0;
+
+  // Считаем по всем дням, которые есть в data
+  if (data && data.days) {
+    Object.keys(data.days).forEach(dateKey => {
+      const day = data.days[dateKey];
+      if (day.groups && day.groups[group]) {
+        day.groups[group].forEach(l => {
+          const id = `${dateKey}_${l.n}_${group}`;
+          if (att[id] === 'attended') attended++;
+          if (att[id] === 'missed') missed++;
+          total++;
+        });
+      }
+    });
+  }
+
+  const percent = total > 0 ? Math.round((attended / (attended + missed || 1)) * 100) : 0;
+
+  app.replaceChildren();
+  
+  const grid = el('div', 'stats-grid');
+  
+  const c1 = el('div', 'stat-card');
+  c1.innerHTML = `<div class="stat-value">${attended}</div><div class="stat-label">Посещено</div>`;
+  
+  const c2 = el('div', 'stat-card');
+  c2.innerHTML = `<div class="stat-value" style="color: var(--red)">${missed}</div><div class="stat-label">Пропущено</div>`;
+  
+  grid.append(c1, c2);
+  app.appendChild(grid);
+
+  const progCard = el('div', 'stat-card');
+  progCard.style.textAlign = 'left';
+  progCard.innerHTML = `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-weight: 700;">Посещаемость</span>
+        <span style="font-weight: 800; color: var(--steel);">${percent}%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%; background: ${percent > 70 ? 'var(--green)' : 'var(--red)'}"></div></div>
+    <div style="font-size: 13px; color: var(--mute); margin-top: 10px;">Всего отмечено пар: ${attended + missed} из ${total}</div>
+  `;
+  app.appendChild(progCard);
+
+  // Кнопка сброса
+  const resetBtn = el('button', 'link', 'Сбросить всю статистику');
+  resetBtn.style.color = 'var(--red)';
+  resetBtn.style.marginTop = '20px';
+  resetBtn.onclick = () => {
+    if (confirm('Вы уверены, что хотите удалить все отметки?')) {
+      localStorage.removeItem('attendance');
+      showStats();
+    }
+  };
+  app.appendChild(resetBtn);
 }
 
 function show() {
@@ -186,14 +281,23 @@ function show() {
   document.getElementById('title').textContent = 'Расписание ' + group;
   document.getElementById('sub').style.display = 'none';
   app.replaceChildren();
-  const ch = el('button', 'link', '← Сменить группу'); ch.onclick = () => { group = null; show(); }; app.appendChild(ch);
+  
+  const topBar = el('div');
+  const ch = el('button', 'link', '← Сменить группу'); ch.onclick = () => { group = null; show(); };
+  topBar.appendChild(ch);
+  app.appendChild(topBar);
 
   const tabs = el('div', 'tabs');
-  [['news', 'Новости'], ['day', 'Сегодня'], ['week', 'Неделя'], ['bells', 'Расписание звонков']].forEach(([m, t]) => {
+  [['news', 'Новости'], ['day', 'Сегодня'], ['week', 'Неделя'], ['bells', 'Звонки'], ['stats', 'Статистика']].forEach(([m, t]) => {
     const b = el('button', null, t); b.setAttribute('aria-selected', mode === m);
     b.onclick = () => { mode = m; show(); }; tabs.appendChild(b);
   });
   app.appendChild(tabs);
+
+  if (mode === 'stats') {
+    showStats();
+    return;
+  }
 
   if (!dates.length && mode !== 'bells') { app.appendChild(el('div', 'empty', 'Нет данных.')); return; }
   const t = iso(new Date());
@@ -213,7 +317,7 @@ function show() {
         emptyBlock.innerHTML = `<div style="font-size: 40px; margin-bottom: 10px;">😴</div><div style="font-weight: 700; font-size: 18px; margin-bottom: 6px;">Пар нет</div><div style="font-size: 14px; color: var(--mute);">На этот день расписание еще не выложили, либо занятий не предусмотрено.</div>`;
         app.appendChild(emptyBlock);
     } else {
-        ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday)));
+        ls.forEach(l => app.appendChild(createLessonCard(l, day.weekday, key)));
     }
   } else if (mode === 'week') {
     const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
@@ -226,7 +330,7 @@ function show() {
           emptyBlock.innerHTML = `<div style="font-size: 30px; margin-bottom: 5px;">😴</div><div style="font-weight: 700;">Пар нет</div>`;
           app.appendChild(emptyBlock);
       } else {
-          ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday)));
+          ls.forEach(l => app.appendChild(createLessonCard(l, d.weekday, k)));
       }
     });
   } else if (mode === 'bells') {
